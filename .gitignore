@@ -53,6 +53,7 @@ CONSTRAINTS.md
 SESSION_HANDOFF.md
 NOTES.md
 TODO.md
+dashboard.html
 
 # ─── Backups / 临时文件 ─────────────────────────────────────
 *.bak
