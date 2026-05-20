@@ -21,7 +21,7 @@ import html
 import secrets
 from typing import Annotated
 
-from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi import APIRouter, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app.auth.passkey import (
@@ -46,8 +46,8 @@ _LOGIN_HTML = """<!doctype html>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
            background: #f6f7f9; margin: 0; padding: 24px;
            display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-    .card { background: white; padding: 40px 32px; border-radius: 14px; max-width: 380px; width: 100%;
-            box-shadow: 0 10px 32px rgba(0,0,0,.08); }
+    .card { background: white; padding: 40px 32px; border-radius: 14px;
+            max-width: 380px; width: 100%; box-shadow: 0 10px 32px rgba(0,0,0,.08); }
     h1 { margin: 0 0 4px; font-size: 22px; color: #16a34a; letter-spacing: -.3px; }
     .sub { color: #6b7280; font-size: 13px; margin-bottom: 24px; }
     label { display: block; font-size: 12px; color: #4b5563; margin-top: 14px;
