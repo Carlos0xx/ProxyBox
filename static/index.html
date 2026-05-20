@@ -2822,7 +2822,8 @@ async function loadTraffic() {
    ================================================================= */
 const expandedConns = new Set();
 async function loadConns() {
-  const d = await api('/api/connections');
+  // /api/connections requires Clash API proxy — deferred to v0.2.x. Stub for v0.1.x.
+  const d = { count: 0, connections: [] };
   let tcp = 0, udp = 0, ts = 0, dws = 0;
   d.connections.forEach(c => { tcp += c.tcp; udp += c.udp; ts += c.up_speed; dws += c.down_speed; });
   $('kpi-conns').innerHTML = `${d.count}<span class="unit">台</span>`;
@@ -2925,7 +2926,7 @@ async function openRenameDialog(ip) {
   });
   if (name === null) return;
   try {
-    await apiJSON(`/api/device/${encodeURIComponent(ip)}/label`, {label: name.trim()});
+    await apiJSON(`/api/devices/${encodeURIComponent(ip)}/label`, {label: name.trim()});
     toast.success('设备名已更新', `${ip} → ${name || '(清除)'}`);
     if (currentView === 'history') loadHistoryDevices();
   } catch (e) { toast.error('保存失败', e.message); }
@@ -3039,7 +3040,8 @@ if ($('dev-filter')) $('dev-filter').addEventListener('change', loadDevices);
    VIEW LOADERS — Endpoints (订阅链接)
    ================================================================= */
 async function loadSubs() {
-  const d = await api('/api/subs');
+  // /api/subs (list-all) not implemented in v0.1.x — per-device subs are at /api/devices/{name}/subs.
+  const d = { token: '—', urls: [] };
   $('endpoint-token').textContent = d.token;
   $('endpoints-list').innerHTML = d.urls.map(u => {
     const [name, sub] = CLIENT_NAMES[u.file] || [u.file, ''];
@@ -3437,7 +3439,7 @@ $('hist-label-save').addEventListener('click', async () => {
   if (!_histCurrentIP) { toast.warning('先选设备'); return; }
   const label = $('hist-label-input').value.trim();
   try {
-    await apiJSON(`/api/device/${encodeURIComponent(_histCurrentIP)}/label`, {label});
+    await apiJSON(`/api/devices/${encodeURIComponent(_histCurrentIP)}/label`, {label});
     toast.success('设备名已更新', `${_histCurrentIP} → ${label || '(清除)'}`);
     await loadHistoryDevices();
   } catch (e) { toast.error('保存失败', e.message); }
@@ -3716,7 +3718,7 @@ async function renameDevicePrompt(name, currentLabel) {
   });
   if (label === null) return;
   try {
-    await apiJSON(`/api/devices/${encodeURIComponent(name)}/rename`, {label: label.trim()});
+    await apiJSON(`/api/devices/${encodeURIComponent(name)}/label`, {label: label.trim()});
     toast.success('已重命名', `${name} → ${label || '(清除)'}`);
     loadDevicesMgmt();
   } catch (e) { toast.error('重命名失败', e.message); }
@@ -3904,8 +3906,8 @@ async function rotateDeviceToken(name) {
   });
   if (!ok) return;
   try {
-    const r = await apiJSON(`/api/devices/${encodeURIComponent(name)}/rotate-token`);
-    toast.success('URL 已轮换', `${name}: ...${r.new_token.slice(-6)}`);
+    const r = await apiJSON(`/api/devices/${encodeURIComponent(name)}/regen-subs`);
+    toast.success('URL 已轮换', `${name}: ...${r.sub_token.slice(-6)}`);
     loadDevicesMgmt();
     setTimeout(() => showDeviceSubs(name), 600);
   } catch (e) { toast.error('轮换失败', e.message); }
