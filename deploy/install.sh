@@ -18,24 +18,30 @@ set -euo pipefail
 : "${SUB_DIR:=/var/www/proxybox-sub}"
 : "${SINGBOX_DIR:=/etc/sing-box}"
 
-# ─── pre-flight ────────────────────────────────────────────────────
-if [ "$(id -u)" != "0" ]; then
-    echo "ERROR: run as root (use sudo)" >&2
-    exit 1
-fi
-
-if ! grep -qE '^ID=(debian|ubuntu)$' /etc/os-release 2>/dev/null; then
-    echo "ERROR: this installer supports Debian and Ubuntu only" >&2
-    grep '^PRETTY_NAME' /etc/os-release >&2 || true
-    exit 1
-fi
-
+# ─── sentinel: this looks like a ProxyBox checkout ─────────────────
 if [ ! -f "$PROXYBOX_DIR/pyproject.toml" ]; then
     echo "ERROR: PROXYBOX_DIR=$PROXYBOX_DIR doesn't look like a ProxyBox checkout" >&2
     echo "       expected pyproject.toml at \$PROXYBOX_DIR/" >&2
     exit 1
 fi
 
+# ─── pre-flight: defer to check-prereqs.sh (skippable for hot-paths) ──
+#
+# This validates OS / arch / privilege / RAM / disk / network / systemd /
+# ports / required apt packages BEFORE we touch anything destructive.
+# Skip with PROXYBOX_SKIP_PREREQ=1 only if you've just run check-prereqs.sh
+# yourself and know what you're doing.
+if [ "${PROXYBOX_SKIP_PREREQ:-0}" != "1" ]; then
+    if ! bash "$PROXYBOX_DIR/deploy/check-prereqs.sh"; then
+        echo ""
+        echo "ERROR: pre-flight check failed. fix the issues above and re-run." >&2
+        echo "       (to install missing apt packages automatically:" >&2
+        echo "         sudo bash $PROXYBOX_DIR/deploy/check-prereqs.sh --install)" >&2
+        exit 1
+    fi
+fi
+
+echo ""
 echo "==> ProxyBox installer"
 echo "    source:     $PROXYBOX_DIR"
 echo "    config:     $CONFIG_DIR"

@@ -33,25 +33,36 @@ the path).
 
 ### Step 1 — Pre-flight
 
+After Step 2 has run (so `/opt/proxybox/deploy/check-prereqs.sh` exists on
+the host), use the bundled checker — it's exhaustive (9 categories) and
+returns a clean exit code:
+
+```bash
+ssh "$USER@$HOST" 'bash /opt/proxybox/deploy/check-prereqs.sh'
+```
+
+If it exits non-zero, paste the output back to the user and **stop** —
+don't try to "fix" their environment unless they explicitly ask.
+
+For the **first** SSH after the user gave us VPS credentials (before
+Step 2 has cloned the repo), do a minimal in-line check first:
+
 ```bash
 ssh -o BatchMode=yes "$USER@$HOST" bash -s <<'EOF'
-echo "[arch] $(uname -m)"
+echo "[arch]" $(uname -m)
 echo "[os]";   grep PRETTY_NAME /etc/os-release
 echo "[disk]"; df -h / | tail -1
 echo "[mem]";  free -h | head -2
-echo "[root]"; id -u
+echo "[priv]"; if [ "$(id -u)" = "0" ]; then echo root; else sudo -n true 2>/dev/null && echo "sudo-ok" || echo "no-sudo"; fi
 EOF
 ```
 
-Require:
-- arch = `x86_64` or `aarch64`
-- OS = Debian or Ubuntu (any actively-supported release)
-- root free disk ≥ 5 GB
-- RAM ≥ 512 MB
-- `id -u` returns 0, or user can `sudo -n true`
-
-If any check fails, report to the user and stop — don't try to "fix" their
-environment.
+Bail out if any of:
+- arch ∉ {x86_64, aarch64}
+- OS ∉ {debian, ubuntu}
+- free disk on `/` < 5 G
+- RAM < 512 MB
+- `[priv]` is `no-sudo`
 
 ### Step 2 — Get the source onto the VPS
 
