@@ -159,9 +159,7 @@ def build_clash_yaml(
     return yaml.safe_dump(cfg, sort_keys=False, allow_unicode=True)
 
 
-def build_shadowrocket_conf(
-    device: dict[str, Any], sb_cfg: dict[str, Any] | None = None
-) -> str:
+def build_shadowrocket_conf(device: dict[str, Any], sb_cfg: dict[str, Any] | None = None) -> str:
     """Shadowrocket / Surge .conf format. VLESS Reality syntax is Shadowrocket-specific."""
     if sb_cfg is None:
         sb_cfg = singbox.read_config()
