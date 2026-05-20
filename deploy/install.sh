@@ -55,21 +55,28 @@ if [ "$LANG_CHOICE" = "zh" ]; then
     M_BOOTSTRAP_DEVICE="==> 创建首台默认设备 (%s)..."
     M_BOOTSTRAP_OK="    设备已创建: sub_token=%s"
     M_BOOTSTRAP_FAIL="    [警告] 首台设备自动创建失败, 请稍后手动到 admin 面板新建"
-    M_DONE_HEADER="ProxyBox 已安装 — 复制下方任一 URL 即可使用"
-    M_ADMIN_URL_LABEL="  🔑 后台管理 URL  (含 token, 请妥善保存):"
-    M_ADMIN_URL_VAL="    %s"
-    M_SUBS_LABEL="  📲 订阅 URL  (粘进客户端的 \"添加订阅\" 即可翻墙):"
-    M_SUB_DEFAULT="    [推荐] sing-box / Shadowrocket / Hiddify (Type: Subscribe)"
-    M_SUB_CLASH="    [Clash] Stash / Clash for iOS / Clash Verge"
-    M_SUB_MERLIN="    [路由] AsusWRT-Merlin (Clash + 透明代理)"
-    M_SUB_SR="    [备用] Shadowrocket .conf (Surge 格式)"
-    M_SUB_TXT="    [.txt] URI 列表 (扩展名别名)"
-    M_SERVICES_LABEL="  服务状态:"
-    M_OPTIONAL_LABEL="  可选功能 (后续按需开启):"
-    M_OPTIONAL_PASSKEY="    - passkey:  config.yaml 里 features.passkey=true + 填 passkey.rp_id/origin + 套 HTTPS"
-    M_OPTIONAL_BOT="    - TG bot:   编辑 /etc/proxybox/bot.env, 然后 'systemctl enable --now proxybox-bot'"
-    M_OPTIONAL_TLS="    - HTTPS:    生产环境请装 Caddy + Let's Encrypt 反代 8080, admin URL 改成 https://"
-    M_FOOTER_TIP="  完整 token 也保存在 %s/config.yaml (admin.token 字段)"
+    M_DONE_HEADER="ProxyBox 安装完成"
+    M_DONE_SUB="直接复制下方任一 URL 使用, 无需其他操作"
+    M_SECTION_ADMIN_TITLE="🔑 后台管理 URL"
+    M_SECTION_ADMIN_HINT="含 token, 请妥善保存"
+    M_SECTION_SUBS_TITLE="📲 订阅 URL"
+    M_SECTION_SUBS_HINT="任挑一个粘进客户端的 \"添加订阅\""
+    M_SUB_DEFAULT_TAG="[推荐]"
+    M_SUB_DEFAULT_DESC="sing-box · Shadowrocket · Hiddify  (Type: Subscribe)"
+    M_SUB_CLASH_TAG="[Clash 系]"
+    M_SUB_CLASH_DESC="Stash · Clash for iOS · Clash Verge"
+    M_SUB_MERLIN_TAG="[路由器]"
+    M_SUB_MERLIN_DESC="AsusWRT-Merlin · Clash 透明代理"
+    M_SUB_SR_TAG="[备用]"
+    M_SUB_SR_DESC="Shadowrocket .conf · Surge 格式"
+    M_SUB_TXT_TAG="[别名]"
+    M_SUB_TXT_DESC="URI 列表 · .txt 扩展名"
+    M_SECTION_SERVICES_TITLE="服务状态"
+    M_SECTION_ADVANCED_TITLE="进阶 — 按需开启"
+    M_ADV_PASSKEY="passkey   config.yaml 里 features.passkey=true + 套 HTTPS"
+    M_ADV_BOT="TG bot    填 /etc/proxybox/bot.env, 然后 systemctl enable --now proxybox-bot"
+    M_ADV_TLS="HTTPS     Caddy + Let's Encrypt 反代 8080 (生产环境)"
+    M_FOOTER_TIP="完整 token 备份位置: %s/config.yaml (admin.token 字段)"
     M_ERR_UNSUPPORTED_ARCH="错误: 不支持的架构 %s"
 else
     M_NOT_PROXYBOX_DIR="ERROR: PROXYBOX_DIR=%s doesn't look like a ProxyBox checkout"
@@ -90,23 +97,45 @@ else
     M_BOOTSTRAP_DEVICE="==> auto-creating first device (%s)..."
     M_BOOTSTRAP_OK="    device created: sub_token=%s"
     M_BOOTSTRAP_FAIL="    [warn] first-device auto-create failed, create one manually from admin UI later"
-    M_DONE_HEADER="ProxyBox installed — copy any URL below to start using it"
-    M_ADMIN_URL_LABEL="  🔑 admin URL  (contains token, keep private):"
-    M_ADMIN_URL_VAL="    %s"
-    M_SUBS_LABEL="  📲 subscription URLs  (paste into client's \"Add Subscription\"):"
-    M_SUB_DEFAULT="    [pick this] sing-box / Shadowrocket / Hiddify (Type: Subscribe)"
-    M_SUB_CLASH="    [Clash]     Stash / Clash for iOS / Clash Verge"
-    M_SUB_MERLIN="    [router]    AsusWRT-Merlin (Clash + transparent proxy)"
-    M_SUB_SR="    [fallback]  Shadowrocket .conf (Surge format)"
-    M_SUB_TXT="    [.txt]      URI list (extension alias)"
-    M_SERVICES_LABEL="  services:"
-    M_OPTIONAL_LABEL="  optional features (enable later if needed):"
-    M_OPTIONAL_PASSKEY="    - passkey:  set features.passkey=true + passkey.rp_id/origin in config.yaml + Caddy/TLS"
-    M_OPTIONAL_BOT="    - TG bot:   fill /etc/proxybox/bot.env then 'systemctl enable --now proxybox-bot'"
-    M_OPTIONAL_TLS="    - HTTPS:    install Caddy + Let's Encrypt in front of 8080 for production"
-    M_FOOTER_TIP="  full token also stored at %s/config.yaml (admin.token field)"
+    M_DONE_HEADER="ProxyBox installed"
+    M_DONE_SUB="copy any URL below to start using it, no further steps required"
+    M_SECTION_ADMIN_TITLE="🔑 admin URL"
+    M_SECTION_ADMIN_HINT="contains token, keep private"
+    M_SECTION_SUBS_TITLE="📲 subscription URLs"
+    M_SECTION_SUBS_HINT="paste any one into your client's \"Add Subscription\""
+    M_SUB_DEFAULT_TAG="[pick this]"
+    M_SUB_DEFAULT_DESC="sing-box · Shadowrocket · Hiddify  (Type: Subscribe)"
+    M_SUB_CLASH_TAG="[Clash]"
+    M_SUB_CLASH_DESC="Stash · Clash for iOS · Clash Verge"
+    M_SUB_MERLIN_TAG="[router]"
+    M_SUB_MERLIN_DESC="AsusWRT-Merlin · Clash transparent proxy"
+    M_SUB_SR_TAG="[fallback]"
+    M_SUB_SR_DESC="Shadowrocket .conf · Surge format"
+    M_SUB_TXT_TAG="[alias]"
+    M_SUB_TXT_DESC="URI list · .txt extension"
+    M_SECTION_SERVICES_TITLE="services"
+    M_SECTION_ADVANCED_TITLE="advanced — enable later if needed"
+    M_ADV_PASSKEY="passkey   set features.passkey=true + passkey.rp_id/origin in config.yaml + Caddy/TLS"
+    M_ADV_BOT="TG bot    fill /etc/proxybox/bot.env then systemctl enable --now proxybox-bot"
+    M_ADV_TLS="HTTPS     install Caddy + Let's Encrypt in front of 8080 for production"
+    M_FOOTER_TIP="full token also stored at %s/config.yaml (admin.token field)"
     M_ERR_UNSUPPORTED_ARCH="ERROR: unsupported arch %s"
 fi
+
+# ─── colour helpers (TTY only — bot/file-piped output stays plain) ──
+if [ -t 1 ]; then
+    C_RESET=$'\033[0m'
+    C_BOLD=$'\033[1m'
+    C_DIM=$'\033[2m'
+    C_GREEN=$'\033[32m'
+    C_GREEN_B=$'\033[1;32m'
+    C_YELLOW_B=$'\033[1;33m'
+    C_CYAN_B=$'\033[1;36m'
+    C_RED=$'\033[31m'
+else
+    C_RESET= C_BOLD= C_DIM= C_GREEN= C_GREEN_B= C_YELLOW_B= C_CYAN_B= C_RED=
+fi
+HR="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # ─── config (overridable via env) ──────────────────────────────────
 : "${PROXYBOX_DIR:=$(cd "$(dirname "$0")/.." && pwd)}"
@@ -423,50 +452,74 @@ fi
 
 # ─── 14. summary ───────────────────────────────────────────────────
 echo ""
-echo "============================================================"
-echo "  $M_DONE_HEADER"
-echo "============================================================"
 echo ""
-echo "$M_ADMIN_URL_LABEL"
-printf "$M_ADMIN_URL_VAL\n" "$ADMIN_URL"
+printf "%s  %s%s\n" "$C_GREEN_B" "$HR" "$C_RESET"
+printf "  %s✅  %s%s\n" "$C_GREEN_B" "$M_DONE_HEADER" "$C_RESET"
+printf "      %s%s%s\n" "$C_DIM" "$M_DONE_SUB" "$C_RESET"
+printf "%s  %s%s\n" "$C_GREEN_B" "$HR" "$C_RESET"
 echo ""
 
+# ── Admin URL block (the credential — emphasised) ───────────────────
+printf "  %s%s%s  %s— %s%s\n" "$C_CYAN_B" "$M_SECTION_ADMIN_TITLE" "$C_RESET" "$C_DIM" "$M_SECTION_ADMIN_HINT" "$C_RESET"
+echo ""
+printf "      %s%s%s\n" "$C_GREEN_B" "$ADMIN_URL" "$C_RESET"
+echo ""
+
+# ── Subscription URLs block ─────────────────────────────────────────
 if [ -n "$SUB_TOKEN" ]; then
     SUB_BASE="$ADMIN_BASE/api/sub/$SUB_TOKEN"
-    echo "$M_SUBS_LABEL"
+    printf "  %s%s%s  %s— %s%s\n" "$C_CYAN_B" "$M_SECTION_SUBS_TITLE" "$C_RESET" "$C_DIM" "$M_SECTION_SUBS_HINT" "$C_RESET"
     echo ""
-    echo "$M_SUB_DEFAULT"
-    echo "      $SUB_BASE"
+
+    # Recommended — yellow ✦ + bold tag + bold green URL
+    printf "    %s✦ %s%s  %s%s%s\n" \
+        "$C_YELLOW_B" "$M_SUB_DEFAULT_TAG" "$C_RESET" "$C_BOLD" "$M_SUB_DEFAULT_DESC" "$C_RESET"
+    printf "      %s%s%s\n" "$C_GREEN_B" "$SUB_BASE" "$C_RESET"
     echo ""
-    echo "$M_SUB_CLASH"
-    echo "      $SUB_BASE/clash.yaml"
-    echo ""
-    echo "$M_SUB_MERLIN"
-    echo "      $SUB_BASE/merlin.yaml"
-    echo ""
-    echo "$M_SUB_SR"
-    echo "      $SUB_BASE/shadowrocket.conf"
-    echo ""
-    echo "$M_SUB_TXT"
-    echo "      $SUB_BASE/sub.txt"
-    echo ""
+
+    # Other formats — same tag-bold + URL-green pattern, no ✦, no bold on URL
+    for entry in \
+        "$M_SUB_CLASH_TAG|$M_SUB_CLASH_DESC|/clash.yaml" \
+        "$M_SUB_MERLIN_TAG|$M_SUB_MERLIN_DESC|/merlin.yaml" \
+        "$M_SUB_SR_TAG|$M_SUB_SR_DESC|/shadowrocket.conf" \
+        "$M_SUB_TXT_TAG|$M_SUB_TXT_DESC|/sub.txt"; do
+        IFS='|' read -r tag desc suffix <<< "$entry"
+        printf "      %s%s%s  %s\n" "$C_BOLD" "$tag" "$C_RESET" "$desc"
+        printf "      %s%s%s%s\n" "$C_GREEN" "$SUB_BASE" "$suffix" "$C_RESET"
+        echo ""
+    done
 fi
 
-echo "$M_SERVICES_LABEL"
+# ── Services block — green ✓ for active, red ✗ for inactive ─────────
+printf "  %s%s%s\n" "$C_CYAN_B" "$M_SECTION_SERVICES_TITLE" "$C_RESET"
+echo ""
 for svc in sing-box proxybox-admin proxybox-traffic-worker fail2ban; do
     state=$(systemctl is-active "$svc" 2>/dev/null || echo unknown)
     case "$state" in
-        active)   mark="[+]" ;;
-        inactive) mark="[-]" ;;
-        *)        mark="[?]" ;;
+        active)
+            printf "      %s✓%s  %-26s %s%s%s\n" \
+                "$C_GREEN_B" "$C_RESET" "$svc" "$C_GREEN" "$state" "$C_RESET"
+            ;;
+        inactive)
+            printf "      %s✗%s  %-26s %s%s%s\n" \
+                "$C_RED" "$C_RESET" "$svc" "$C_RED" "$state" "$C_RESET"
+            ;;
+        *)
+            printf "      ?  %-26s %s\n" "$svc" "$state"
+            ;;
     esac
-    printf "    %s %-30s %s\n" "$mark" "$svc" "$state"
 done
 echo ""
-echo "$M_OPTIONAL_LABEL"
-echo "$M_OPTIONAL_PASSKEY"
-echo "$M_OPTIONAL_BOT"
-echo "$M_OPTIONAL_TLS"
+
+# ── Advanced (dim — these are opt-in, deliberately low-emphasis) ─────
+printf "  %s%s%s\n" "$C_DIM" "$M_SECTION_ADVANCED_TITLE" "$C_RESET"
+printf "    %s· %s%s\n" "$C_DIM" "$M_ADV_PASSKEY" "$C_RESET"
+printf "    %s· %s%s\n" "$C_DIM" "$M_ADV_BOT" "$C_RESET"
+printf "    %s· %s%s\n" "$C_DIM" "$M_ADV_TLS" "$C_RESET"
 echo ""
-printf "$M_FOOTER_TIP\n" "$CONFIG_DIR"
-echo "============================================================"
+
+# ── Footer (dim — backup info, not primary action) ──────────────────
+printf "  %s" "$C_DIM"
+printf "$M_FOOTER_TIP" "$CONFIG_DIR"
+printf "%s\n" "$C_RESET"
+echo ""

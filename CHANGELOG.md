@@ -5,6 +5,25 @@ and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [v0.1.3] — polished install summary
+
+### Changed
+- `install.sh`'s post-install summary now uses ANSI color + structured
+  layout: bold green banner, cyan section titles, yellow `✦` marker on
+  the recommended subscription URL, bold-green admin URL, dim greys for
+  the "advanced" / footer rows. Colors auto-disable when stdout is not
+  a TTY (so output piped to a file or relayed through a non-interactive
+  SSH stays plain ASCII — no escape-code bleed).
+- Section dividers use `━━━` (unicode) instead of `===` for a cleaner
+  look. Service status uses `✓ / ✗` instead of `[+] / [-]`.
+
+### Why
+The previous summary was correct but dense — important and unimportant
+information shared the same visual weight. Now the admin URL and the
+"[推荐]" subscription URL pop visually; "advanced features" and the
+"completed token backup location" recede into dim text so普通用户
+focuses on the action items.
+
 ## [v0.1.2] — one-shot install UX
 
 ### Added
