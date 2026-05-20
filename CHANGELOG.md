@@ -5,6 +5,64 @@ and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [v0.1.6] — username/password login is the default (URL-token bypass off)
+
+### Changed (BREAKING for direct URL-token users)
+- **`/admin/{token}/...` requires a session cookie by default.** The URL
+  token alone no longer unlocks the panel — every request must present
+  `proxybox_admin_session` (set by `/login`). Token in URL is still part
+  of the route (defense in depth, prevents cookie replay against the
+  wrong instance) but is not sufficient on its own.
+- **`features.url_token_bypass: false`** is the new default. Flip to
+  `true` in `config.yaml` if you need automation/SDK to use the URL
+  token directly without a login round-trip.
+
+### Added
+- **`app/routers/login.py`** — GET/POST `/login` (self-contained HTML
+  form, no JS), POST/GET `/logout` (clears cookie). Form validates
+  `admin.username` + `admin.password` (constant-time compare), then
+  issues the same itsdangerous-signed session cookie the passkey flow
+  already uses.
+- **`admin.username` + `admin.password`** in `config.yaml`. install.sh
+  generates a 16-char alnum password at fresh-install time.
+- **`{{PASSKEY_ENABLED}}` / `{{BOT_ENABLED}}`** SPA template injection
+  so the front-end can hide nav entries for disabled opt-in features.
+- **SPA `api()` helper** — on 401 redirects to `/login?next=<current>`,
+  so a session-expired panel bounces to the form instead of throwing.
+
+### Install summary redesign
+The post-install card hierarchy now leads with the user-must-save
+credentials in bold red:
+```
+🛡 后台登录凭据  — 务必复制保存
+    登录地址  http://<vps>:8080/login
+    用户名    admin                       (bold red)
+    密  码    <16-char alnum>             (bold red)
+```
+Admin URL with token is no longer surfaced unless `url_token_bypass` is
+on.
+
+### Internals
+- `app/auth/token.py` rewritten: session cookie + URL-token-match is the
+  primary accept path; `url_token_bypass=true` is the opt-in fallback.
+  401 carries `X-Login-URL: /login` header.
+- `app/routers/ui.py` no longer uses the `admin_auth` dependency — does
+  its own auth check inline so it can `RedirectResponse(303 → /login)`
+  instead of returning JSON 401 for the SPA HTML route.
+- install.sh writes `url_token_bypass: true` initially so the auto-
+  device-creation curl can authenticate, then flips it to `false` and
+  restarts `proxybox-admin` before printing the summary.
+
+### Why
+User feedback (2026-05-20): "默认使用账户密码登录, 关闭默认 token 登录
+选项, 不安全". Tokens leak via screenshots / browser history more
+easily than passwords; making the username/password flow the default
+matches普通用户's mental model + restores a "logout" affordance.
+
+### Dependencies
+- `python-multipart >= 0.0.9` added (required by FastAPI's `Form(...)`
+  parameter parsing).
+
 ## [v0.1.5] — post-install SPA UX fixes (real connection data + clean service list)
 
 ### Added
