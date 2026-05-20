@@ -5,6 +5,55 @@ and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [v0.1.1] — SPA refresh fixes + multi-format subscriptions
+
+### Fixed
+- **SPA dashboard** was BWG-ported as-is and called endpoint paths /
+  shapes that v0.1.x rewrote. Repaired so every view loads without
+  `刷新失败` toasts on a clean install:
+  - `loadTraffic` adapted to `/api/traffic` raw-byte schema (`rx_today`,
+    `tx_today`, `active_devices_24h`) — was reading the old `today.total`
+    pre-formatted string.
+  - `loadBans` adapted to `/api/bans` field names (`currently_banned`,
+    `banned`) — was reading BWG's `current_banned` / `banned_ips`.
+  - `loadDevices` (订阅记录 / subscribers view) stubbed — BWG's nginx
+    access-log tailing isn't in v0.1.x; view now shows a placeholder.
+  - `loadConns` (`/api/connections`) and `loadSubs` (`/api/subs` list-all)
+    stubbed at the call site — v0.2 candidates.
+  - Device-management endpoint paths: `/api/device/...` (singular) →
+    `/api/devices/...`; `/rename` body `{label}` → `/label`;
+    `/rotate-token` (+ `r.new_token`) → `/regen-subs` (+ `r.sub_token`).
+  - `showDeviceSubs` baseUrl: was `<host>/{sub_token}` → corrected to
+    `<host>/api/sub/{sub_token}`.
+- **PII / brand drift in `static/index.html`**: replaced personal device
+  names in placeholder examples with generic ones (`phone-1`, `tablet-1`,
+  `laptop-1`, `home-router`); removed the BWG-migration
+  `deprecateLegacyURL()` function (mentioned the user's router model and
+  device count); generic-ized "家用路由器 + N 设备" copy. Brand
+  blocklist updated to catch regressions.
+
+### Added
+- **Multi-format subscription URLs** — five extension-suffixed routes per
+  device, all generated on-the-fly from one row:
+  - `/api/sub/{sub_token}` — URI list (sing-box family, default)
+  - `/api/sub/{sub_token}/sub.txt` — same, `.txt` alias
+  - `/api/sub/{sub_token}/clash.yaml` — Mihomo / Clash for iOS / Stash
+  - `/api/sub/{sub_token}/merlin.yaml` — Clash YAML + `tun: enable: true`
+    block for AsusWRT-Merlin transparent proxy
+  - `/api/sub/{sub_token}/shadowrocket.conf` — Surge `.conf` format
+  Implemented via `build_clash_yaml(with_tun=...)` and
+  `build_shadowrocket_conf()` in `app/services/subscriptions.py`.
+- **No-cache headers** on the SPA index route so SPA bugfixes reach the
+  browser without manual hard refresh in the future.
+- **`订阅链接` view** (loadSubs) now lists per-device public sub URLs,
+  copy-to-clipboard for each.
+- **Diagnostic stack trace in refresh-error toast** — the
+  `loadCurrentView` catch now logs to console and includes view name +
+  top 3 stack frames in the toast text.
+- **SKILL.md Step 7 (handoff)** documents the 5 subscription URL formats
+  in a table and lists generic device-name examples (`phone-1`,
+  `tablet-1`, `laptop-1`, `home-router`).
+
 ## [v0.1.0] — initial release
 
 ### Added
