@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# .githooks/pre-commit — 调 PII 检查 + gitleaks (if installed)
+#
+# 启用:  git config core.hooksPath .githooks   (在仓库目录跑一次)
+
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+
+# 1. PII blocklist check (本地必跑)
+"$repo_root/scripts/pii-check.sh"
+
+# 2. gitleaks (如果装了就跑, 否则跳过 + 建议装)
+if command -v gitleaks >/dev/null 2>&1; then
+    gitleaks protect --staged --redact --no-banner || {
+        echo "🛑 gitleaks 命中. 看上面 redacted 输出, fix 后重新 commit"
+        exit 1
+    }
+else
+    echo "ℹ️  gitleaks not installed (推荐: brew install gitleaks)"
+fi
+
+echo "✅ pre-commit 全过"
