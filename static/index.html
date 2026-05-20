@@ -2765,7 +2765,9 @@ async function loadCurrentView() {
     }
     updateLastUpdated();
   } catch (e) {
-    toast.error('刷新失败', e.message);
+    console.error('[loadCurrentView] view=' + currentView + ' threw:', e);
+    const where = (e.stack || '').split('\n').slice(0, 3).join(' | ').slice(0, 280);
+    toast.error('刷新失败 (' + currentView + ')', e.message + (where ? '\n' + where : ''));
   } finally {
     $('refresh-indicator').classList.remove('spinning');
   }
@@ -2944,10 +2946,23 @@ async function blockIPDirect(ip) {
    VIEW LOADERS — Subscribers (订阅记录)
    ================================================================= */
 async function loadDevices() {
+  // BWG parsed nginx access logs to record who fetched the subscription URL
+  // (the "subscribers" / 订阅记录 feed). v0.1.x doesn't ship the nginx-tail
+  // worker, so this feed is empty. /api/devices returns device-list shape,
+  // not access-event records — render a placeholder instead of mis-mapping.
+  const list = $('subscribers-list');
+  if (list) {
+    list.innerHTML = '<div class="empty-state" style="padding:48px 16px"><span class="empty-icon">📭</span><div class="empty-desc">订阅访问记录在 v0.1.x 未启用<br><span style="opacity:.6;font-size:13px">(BWG 依赖 nginx 日志,本版本未引入)</span></div></div>';
+  }
+  if ($('dev-filter')) {
+    $('dev-filter').innerHTML = '<option value="">所有设备</option>';
+  }
+  return;
+  // ---- BWG legacy body kept below for v0.2 port ----
+  // eslint-disable-next-line no-unreachable
   const h = $('dev-hours').value;
   const filterDev = $('dev-filter') ? $('dev-filter').value : '';
   const d = await api(`/api/devices?hours=${h}`);
-  const list = $('subscribers-list');
 
   // Populate device filter dropdown (once or on data refresh)
   if ($('dev-filter')) {
