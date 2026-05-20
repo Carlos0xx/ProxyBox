@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.db.init import init_schema
-from app.routers import bans, devices, history, subscriptions, system, traffic
+from app.routers import actions, bans, devices, history, subscriptions, system, traffic
 
 
 @asynccontextmanager
@@ -29,6 +29,8 @@ def create_app() -> FastAPI:
     app.include_router(history.router)
     app.include_router(bans.router)
     app.include_router(bans.action_router)
+    app.include_router(actions.router)
+    app.include_router(actions.api_router)
     return app
 
 
