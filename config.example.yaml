@@ -1,0 +1,39 @@
+# ProxyBox configuration
+#
+# Copy this to /etc/proxybox/config.yaml (or set PROXYBOX_CONFIG env var to a
+# custom path) and edit before first run. install.sh handles this on deploy.
+#
+# Secrets (admin token, bot token, ...) should be read from env vars via the
+# ${ENV_VAR} placeholder syntax — keep them out of this file in production.
+
+admin:
+  # Token in URL path: /admin/{token}/api/...
+  # In production, set ADMIN_TOKEN env var; for dev you may hardcode a value.
+  token: "${ADMIN_TOKEN}"
+  host: "0.0.0.0"
+  port: 8080
+
+paths:
+  traffic_db: /var/lib/proxybox/traffic.db
+  static_dir: /opt/proxybox/static
+  sub_dir: /var/www/proxybox-sub
+  singbox_config: /etc/sing-box/config.json
+
+services:
+  # systemd unit names probed by GET /api/status.
+  # Comment out units you don't run; add custom ones as needed.
+  monitored:
+    - sing-box
+    - caddy
+    - proxybox-admin
+    - proxybox-traffic-worker
+    - fail2ban
+
+features:
+  # WebAuthn passkey auth (planned for v0.2.0). When false, only URL-path
+  # token auth is active.
+  passkey: false
+
+  # Telegram bot module (proxybox-bot.service). Set bot token via TG_BOT_TOKEN
+  # env var when enabled.
+  bot: false
