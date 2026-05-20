@@ -5,6 +5,38 @@ and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [v0.1.7] — SPA history pages no longer crash; logs hide uninstalled services
+
+### Fixed
+- **`总流量` page** threw `Cannot read properties of undefined (reading
+  'label')`. `loadTrafficOverview` was calling `/api/history/all-daily`
+  (system-wide daily rollup) but `renderTrafficOverview` reads per-device
+  fields (`dev.label`, `dev.kind`, `dev.total`, `dev.daily[idx].total`).
+  Switched the call to `/api/history/devices`, and expanded that
+  endpoint's response to carry `devices[].label/kind/total`,
+  `devices[].daily[].total`, plus top-level `dates`, `grand_total`,
+  `active_count`.
+- **`设备历史` page** same `'label'` crash. `/api/history/device/{name}`
+  now joins to the `device` table for `device: {name, label, kind,
+  last_ip, last_seen}`, rolls hourly buckets up into a `daily` array
+  with `total`, and returns empty `hosts`/`apps` arrays (those are BWG
+  host-fingerprint features intentionally dropped per CONSTRAINTS §3).
+- **`日志` page tabs** for caddy / TG bot / 看门狗 returned HTTP 400.
+  Hardcoded tab list dropped — `日志` view now iterates
+  `lastStatus.services` (= `config.services.monitored`) to build tabs
+  dynamically, matching the server-side allowlist on `/api/logs/{name}`.
+
+### Removed
+- **`订阅记录` nav entry**. v0.1.x doesn't ship the nginx-tail worker
+  that backed this view in BWG; rather than show a "feature disabled"
+  placeholder forever, the nav item is removed entirely.
+
+### Notes (not bugs)
+- `总览` "实时速度" shows 0 B/s when no client is actively transferring;
+  this is correct — `/api/connections` reports the sing-box Clash API's
+  instantaneous `up_bps/down_bps`, which goes to zero between flows.
+  Switch on the phone and refresh — non-zero values appear.
+
 ## [v0.1.6] — username/password login is the default (URL-token bypass off)
 
 ### Changed (BREAKING for direct URL-token users)

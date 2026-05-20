@@ -1473,10 +1473,10 @@ a:hover { color: var(--accent-hover); }
         <span>设备管理</span>
         <span class="nav-badge" id="badge-devmgmt">0</span>
       </div>
-      <div class="nav-item" data-view="subscribers">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-        <span>订阅记录</span>
-      </div>
+      <!-- 订阅记录 (subscribers) view removed in v0.1.7 — BWG-era feature
+           parsed nginx access logs to record who fetched the sub URL.
+           v0.1.x doesn't ship the tail worker (per CONSTRAINTS §3), so
+           the page never had real data. Hidden rather than stubbed. -->
     </div>
 
     <div class="nav-section">
@@ -2058,11 +2058,7 @@ a:hover { color: var(--accent-hover); }
           </div>
         </div>
         <div class="log-toolbar">
-          <button class="log-tab" data-log="sing-box">sing-box</button>
-          <button class="log-tab" data-log="caddy">caddy</button>
-          <button class="log-tab" data-log="bot">TG bot</button>
-          <button class="log-tab" data-log="watchdog">看门狗</button>
-          <button class="log-tab" data-log="fail2ban">fail2ban</button>
+          <div id="log-tabs" style="display:contents"></div>
           <div class="log-actions">
             <div class="search-input" style="width: 180px;">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -2782,7 +2778,7 @@ async function loadCurrentView() {
       case 'services':    await Promise.all([loadStatus(), renderServices()]); break;
       case 'devices':     await loadDevicesMgmt(); break;
       case 'passkeys':    await loadPasskeys(); break;
-      case 'logs':        break;
+      case 'logs':        await loadStatus(); renderLogTabs(); break;
     }
     updateLastUpdated();
   } catch (e) {
@@ -3272,10 +3268,38 @@ async function restartSvc(svc) {
 /* =================================================================
    VIEW LOADERS — Logs
    ================================================================= */
+// Build log tabs dynamically from /api/status's tracked services — same
+// allowlist the /api/logs/{name} endpoint enforces. Drops the BWG-era
+// hardcoded list (caddy/bot/watchdog) that 400'd when those services
+// weren't installed.
+const LOG_LABELS = {
+  'sing-box':                'sing-box',
+  'proxybox-admin':          'admin',
+  'proxybox-traffic-worker': 'traffic',
+  'fail2ban':                'fail2ban',
+  'caddy':                   'caddy',
+  'proxybox-bot':            'TG bot',
+};
+
+function renderLogTabs() {
+  const tracked = Object.keys(lastStatus?.services || {});
+  const host = $('log-tabs');
+  if (!host) return;
+  host.innerHTML = tracked.map((svc, i) => {
+    const label = LOG_LABELS[svc] || svc;
+    const active = i === 0 ? ' active' : '';
+    return `<button class="log-tab${active}" data-log="${escapeHtml(svc)}">${escapeHtml(label)}</button>`;
+  }).join('');
+  host.querySelectorAll('.log-tab').forEach(b => {
+    b.addEventListener('click', () => loadLog(b.dataset.log));
+  });
+  if (tracked.length) loadLog(tracked[0]);
+}
+
 async function loadLog(name) {
-  const cn = {'sing-box':'sing-box','caddy':'caddy','bot':'TG bot','watchdog':'看门狗','fail2ban':'fail2ban'}[name];
+  const label = LOG_LABELS[name] || name;
   const lines = $('log-lines').value || 80;
-  $('log-current').textContent = `${cn} · 最近 ${lines} 行`;
+  $('log-current').textContent = `${label} · 最近 ${lines} 行`;
   $('log-content').textContent = '加载中…';
   $$('.log-tab').forEach(b => b.classList.toggle('active', b.dataset.log === name));
   try {
@@ -3296,7 +3320,6 @@ function applyLogSearch() {
   $('log-content').textContent = filtered.length ? filtered.join('\n') : '(无匹配)';
 }
 
-$$('.log-tab').forEach(b => b.addEventListener('click', () => loadLog(b.dataset.log)));
 $('log-lines').addEventListener('change', () => { const active = document.querySelector('.log-tab.active'); if (active) loadLog(active.dataset.log); });
 $('log-search').addEventListener('input', () => { const active = document.querySelector('.log-tab.active'); if (active) loadLog(active.dataset.log); });
 
@@ -4089,7 +4112,11 @@ function deviceColor(idx) { return DEVICE_COLORS[idx % DEVICE_COLORS.length][0];
 async function loadTrafficOverview() {
   const days = parseInt($('traffic-days').value);
   try {
-    const d = await api(`/api/history/all-daily?days=${days}`);
+    // /api/history/devices returns per-device daily + total + label/kind +
+    // top-level dates/grand_total/active_count — the exact shape
+    // renderTrafficOverview wants. (/api/history/all-daily only has
+    // system-wide daily aggregates, no per-device breakdown.)
+    const d = await api(`/api/history/devices?days=${days}`);
     renderTrafficOverview(d);
   } catch (e) { toast.error('加载失败', e.message); }
 }

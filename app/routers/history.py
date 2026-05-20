@@ -38,7 +38,14 @@ def _cutoff_ts(days: int) -> int:
 
 @router.get("/devices")
 async def history_devices(days: DaysQuery = 7) -> dict:
-    """Per-device daily totals over the last N days."""
+    """Per-device daily totals over the last N days.
+
+    Response shape is denormalised so the SPA's loadTrafficOverview can
+    render directly without a second lookup — each row carries label/kind
+    from the device table, daily entries carry total=rx+tx, and
+    top-level fields cache derived stats (dates, grand_total,
+    active_count).
+    """
     cutoff = _cutoff_ts(days)
     with connection() as conn:
         rows = conn.execute(
@@ -51,22 +58,59 @@ async def history_devices(days: DaysQuery = 7) -> dict:
                ORDER BY device_name, date""",
             (cutoff,),
         ).fetchall()
+        meta = {
+            r["name"]: {"label": r["label"], "kind": r["kind"]}
+            for r in conn.execute("SELECT name, label, kind FROM device").fetchall()
+        }
 
     by_dev: dict[str, list[dict]] = {}
+    all_dates: set[str] = set()
     for r in rows:
+        rx, tx = int(r["rx"] or 0), int(r["tx"] or 0)
         by_dev.setdefault(r["device_name"], []).append(
-            {"date": r["date"], "rx": r["rx"], "tx": r["tx"]}
+            {"date": r["date"], "rx": rx, "tx": tx, "total": rx + tx}
         )
+        all_dates.add(r["date"])
+
+    devices = []
+    grand_total = 0
+    active = 0
+    for name, daily in by_dev.items():
+        d_total = sum(d["total"] for d in daily)
+        grand_total += d_total
+        if d_total > 0:
+            active += 1
+        m = meta.get(name, {})
+        devices.append(
+            {
+                "name": name,
+                "label": m.get("label") or name,
+                "kind": m.get("kind", "generic"),
+                "daily": daily,
+                "total": d_total,
+            }
+        )
+    devices.sort(key=lambda x: -x["total"])
 
     return {
         "days": days,
-        "devices": [{"name": n, "daily": d} for n, d in by_dev.items()],
+        "devices": devices,
+        "dates": sorted(all_dates),
+        "grand_total": grand_total,
+        "active_count": active,
     }
 
 
 @router.get("/device/{name}")
 async def history_device(name: NameInPath, days: DaysQuery = 7) -> dict:
-    """Single device — hourly buckets over N days (drives a date×hour heatmap)."""
+    """Single device — hourly buckets, daily rollup, and device metadata.
+
+    SPA's `renderHistoryDevice` reads `d.device.label`, `d.daily`,
+    `d.hosts`, `d.apps`. v0.1.x doesn't track host-/app-level fingerprints
+    (per CONSTRAINTS §3 — BWG's host dictionary is intentionally dropped),
+    so those two come back as empty lists; the SPA renders that as
+    "暂无数据" — correct outcome.
+    """
     cutoff = _cutoff_ts(days)
     with connection() as conn:
         rows = conn.execute(
@@ -76,21 +120,47 @@ async def history_device(name: NameInPath, days: DaysQuery = 7) -> dict:
                ORDER BY bucket_ts""",
             (name, cutoff),
         ).fetchall()
+        dev_row = conn.execute(
+            "SELECT name, label, kind, last_ip, last_seen FROM device WHERE name = ?",
+            (name,),
+        ).fetchone()
 
-    return {
-        "name": name,
-        "days": days,
-        "buckets": [
+    if dev_row is None:
+        raise HTTPException(404, f"device {name!r} not found")
+
+    buckets = []
+    daily_map: dict[str, dict[str, int]] = {}
+    for r in rows:
+        rx, tx = int(r["rx_bytes"] or 0), int(r["tx_bytes"] or 0)
+        buckets.append(
             {
                 "bucket_ts": r["bucket_ts"],
                 "date": r["date"],
                 "hour": r["hour"],
-                "rx": r["rx_bytes"],
-                "tx": r["tx_bytes"],
+                "rx": rx,
+                "tx": tx,
                 "conn_count": r["conn_count"],
             }
-            for r in rows
-        ],
+        )
+        day = daily_map.setdefault(r["date"], {"date": r["date"], "rx": 0, "tx": 0, "total": 0})
+        day["rx"] += rx
+        day["tx"] += tx
+        day["total"] += rx + tx
+
+    return {
+        "name": name,
+        "days": days,
+        "device": {
+            "name": dev_row["name"],
+            "label": dev_row["label"] or dev_row["name"],
+            "kind": dev_row["kind"],
+            "last_ip": dev_row["last_ip"],
+            "last_seen": dev_row["last_seen"],
+        },
+        "daily": [daily_map[d] for d in sorted(daily_map)],
+        "buckets": buckets,
+        "hosts": [],
+        "apps": [],
     }
 
 
