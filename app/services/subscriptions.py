@@ -170,14 +170,37 @@ def build_shadowrocket_conf(
     name_v = f"ProxyBox-{device['name']}-vless"
     name_h = f"ProxyBox-{device['name']}-hy2"
     obfs_pw = _hy2_obfs_password(sb_cfg)
+    # Surge .conf wants each proxy on a single physical line — build the
+    # two long lines piecewise so the literal string in the file stays
+    # readable and ruff E501 stays happy.
+    vless_parts = [
+        f"{name_v} = vless, {vps_host}, {device['vless_port']}",
+        f"username={device['vless_uuid']}",
+        "tls=true",
+        f"sni={r['sni']}",
+        f"flow={r['flow']}",
+        f"reality-pbk={r['public_b64']}",
+        f"reality-sid={r['short_id']}",
+        "fp=chrome",
+    ]
+    hy2_parts = [
+        f"{name_h} = hysteria2, {vps_host}, {device['hy2_port']}",
+        f"password={device['hy2_password']}",
+        f"sni={r['sni']}",
+        "obfs=salamander",
+        f"obfs-password={obfs_pw}",
+        "skip-cert-verify=true",
+    ]
+    vless_line = ", ".join(vless_parts)
+    hy2_line = ", ".join(hy2_parts)
     return f"""[General]
 bypass-system = true
 skip-proxy = 127.0.0.1, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12, localhost, *.local
 dns-server = system
 
 [Proxy]
-{name_v} = vless, {vps_host}, {device['vless_port']}, username={device['vless_uuid']}, tls=true, sni={r['sni']}, flow={r['flow']}, reality-pbk={r['public_b64']}, reality-sid={r['short_id']}, fp=chrome
-{name_h} = hysteria2, {vps_host}, {device['hy2_port']}, password={device['hy2_password']}, sni={r['sni']}, obfs=salamander, obfs-password={obfs_pw}, skip-cert-verify=true
+{vless_line}
+{hy2_line}
 
 [Proxy Group]
 PROXY = select, {name_v}, {name_h}, DIRECT
