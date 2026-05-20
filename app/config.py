@@ -45,6 +45,13 @@ class AdminSettings(BaseModel):
         return v
 
 
+class ServerSettings(BaseModel):
+    # Public host (IP or domain) clients use to reach this VPS.
+    # Embedded into subscription URIs so phones can connect.
+    # install.sh should auto-detect via ifconfig.me; falls back to manual edit.
+    public_host: str = ""
+
+
 class PathsSettings(BaseModel):
     traffic_db: Path = Path("/var/lib/proxybox/traffic.db")
     static_dir: Path = Path("/opt/proxybox/static")
@@ -76,6 +83,7 @@ class FeaturesSettings(BaseModel):
 
 class AppConfig(BaseModel):
     admin: AdminSettings
+    server: ServerSettings = Field(default_factory=ServerSettings)
     paths: PathsSettings = Field(default_factory=PathsSettings)
     services: ServicesSettings = Field(default_factory=ServicesSettings)
     ports: PortsSettings = Field(default_factory=PortsSettings)

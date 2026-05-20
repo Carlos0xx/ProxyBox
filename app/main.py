@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.db.init import init_schema
-from app.routers import devices, system
+from app.routers import devices, subscriptions, system
 
 
 @asynccontextmanager
@@ -24,6 +24,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="ProxyBox", version="0.1.0", lifespan=lifespan)
     app.include_router(system.router)
     app.include_router(devices.router)
+    app.include_router(subscriptions.router)
     return app
 
 

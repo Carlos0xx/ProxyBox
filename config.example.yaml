@@ -13,6 +13,12 @@ admin:
   host: "0.0.0.0"
   port: 8080
 
+server:
+  # Public host (IP or domain) clients use to reach this VPS.
+  # Embedded into subscription URIs so phones can connect.
+  # install.sh auto-detects via ifconfig.me; manual edit also fine.
+  public_host: ""
+
 paths:
   traffic_db: /var/lib/proxybox/traffic.db
   static_dir: /opt/proxybox/static

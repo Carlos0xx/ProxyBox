@@ -1,4 +1,4 @@
-"""Device endpoints: list, single read, label / notes update, create. Delete TBD."""
+"""Device endpoints: list, single read, label / notes update, create, regen-subs. Delete TBD."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from app.auth.token import admin_auth
 from app.db.connection import connection
 from app.models.device import Device
-from app.services import singbox
+from app.services import singbox, subscriptions
 
 router = APIRouter(
     prefix="/admin/{token}/api/devices",
@@ -125,6 +125,7 @@ async def create_device(body: DeviceCreate, background_tasks: BackgroundTasks) -
         "hy2_password": hy2_password,
         "vless_port": vless_port,
         "hy2_port": hy2_port,
+        "sub_token": sub_token,
     }
     singbox.add_device_inbounds(cfg, device_row)
 
@@ -139,6 +140,7 @@ async def create_device(body: DeviceCreate, background_tasks: BackgroundTasks) -
         conn.commit()
 
     singbox.write_config(cfg, defer_reload=True)
+    subscriptions.write_subscription_file(device_row, cfg)
     background_tasks.add_task(singbox.reload_singbox)
 
     return {
@@ -153,5 +155,31 @@ async def create_device(body: DeviceCreate, background_tasks: BackgroundTasks) -
             "sni": sni,
             "sub_token": sub_token,
         },
+        "subscription_url_path": f"/api/sub/{sub_token}",
         "notice": "sing-box reloading in background; existing proxy connections may briefly drop.",
+    }
+
+
+@router.post("/{name}/regen-subs")
+async def regen_subs(name: NameInPath) -> dict:
+    new_sub_token = secrets.token_hex(8)
+    with connection() as conn:
+        old_row = conn.execute(_GET_SQL, (name,)).fetchone()
+        if old_row is None:
+            raise HTTPException(404, "device not found")
+        old_sub_token = old_row["sub_token"]
+        conn.execute(
+            "UPDATE device SET sub_token = ? WHERE name = ?", (new_sub_token, name)
+        )
+        conn.commit()
+        new_row = conn.execute(_GET_SQL, (name,)).fetchone()
+
+    subscriptions.delete_subscription_file(old_sub_token)
+    subscriptions.write_subscription_file(dict(new_row))
+
+    return {
+        "name": name,
+        "sub_token": new_sub_token,
+        "subscription_url_path": f"/api/sub/{new_sub_token}",
+        "notice": f"old sub_token invalidated; update client subscription URL",
     }
