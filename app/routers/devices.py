@@ -181,5 +181,28 @@ async def regen_subs(name: NameInPath) -> dict:
         "name": name,
         "sub_token": new_sub_token,
         "subscription_url_path": f"/api/sub/{new_sub_token}",
-        "notice": f"old sub_token invalidated; update client subscription URL",
+        "notice": "old sub_token invalidated; update client subscription URL",
+    }
+
+
+@router.post("/{name}/delete")
+async def delete_device(name: NameInPath, background_tasks: BackgroundTasks) -> dict:
+    with connection() as conn:
+        row = conn.execute("SELECT sub_token FROM device WHERE name = ?", (name,)).fetchone()
+        if row is None:
+            raise HTTPException(404, "device not found")
+        sub_token = row["sub_token"]
+        conn.execute("DELETE FROM device WHERE name = ?", (name,))
+        conn.commit()
+
+    cfg = singbox.read_config()
+    removed_tags = singbox.remove_device_inbounds(cfg, name)
+    singbox.write_config(cfg, defer_reload=True)
+    subscriptions.delete_subscription_file(sub_token)
+    background_tasks.add_task(singbox.reload_singbox)
+
+    return {
+        "name": name,
+        "removed_inbounds": removed_tags,
+        "notice": "device deleted; sing-box reloading in background",
     }
