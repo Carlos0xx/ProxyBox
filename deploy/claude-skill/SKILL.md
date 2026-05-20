@@ -249,7 +249,11 @@ handoff. v0.1.6+ exposes a lot in the panel:
   use personal identifiers** — device names land in sing-box config
   + subscription file content, so they're surface for fingerprinting.
 - **Per-device subscription URLs (all 5 formats):** 订阅链接 page or
-  设备管理 → device → 📋 订阅 URL.
+  设备管理 → device → 📋 订阅 URL. The 复制 button works on plain
+  HTTP too (v0.1.12 patched the textarea fallback that newer browsers
+  refused). If a user reports "复制按钮没反应", they're on a SPA
+  shipped before v0.1.12 — `git pull` in `/opt/proxybox` then
+  `systemctl restart proxybox-admin` to upgrade.
 - **Live throughput + per-device history:** 总览 / 设备历史 / 总流量.
   Host categorisation populates within ~10 s of any client browsing
   (v0.1.9 default-on).
