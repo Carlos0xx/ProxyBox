@@ -66,8 +66,15 @@ Bail out if any of:
 
 ### Step 2 — Get the source onto the VPS
 
+A minimal Debian image typically ships *without* `git` or `curl`, so
+preamble the clone with an apt install. The package list is tiny and
+idempotent — re-running it on a fully-provisioned host is a no-op.
+
 ```bash
 ssh "$USER@$HOST" '
+  # bootstrap tools that may be missing on a minimal Debian / Ubuntu cloud image
+  apt-get update -qq && apt-get install -y -qq git curl ca-certificates
+
   if [ -d /opt/proxybox/.git ]; then
     cd /opt/proxybox && git pull --ff-only
   elif [ -d /opt/proxybox ] && [ -n "$(ls -A /opt/proxybox 2>/dev/null)" ]; then
@@ -78,6 +85,10 @@ ssh "$USER@$HOST" '
   fi
 '
 ```
+
+If the user is on Ubuntu's minimal image and the SSH session is not root,
+prefix the `apt-get` lines with `sudo`. The git-clone itself runs as the
+SSH user — clone into `/opt/proxybox` will need root anyway on most images.
 
 ### Step 3 — Run install.sh
 
