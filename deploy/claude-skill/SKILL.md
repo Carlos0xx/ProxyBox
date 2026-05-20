@@ -174,9 +174,32 @@ Tell them, in this order:
 2. Where the full token lives on the VPS
 3. They should set up Caddy + Let's Encrypt before exposing the URL beyond
    trusted networks — current setup is HTTP only
-4. Next steps inside the admin UI: create their first device, copy the
-   subscription URL, paste into a sing-box-compatible client (Shadowrocket
-   on iOS, sing-box-for-android, Hiddify on desktop)
+4. Next steps inside the admin UI:
+   - Click **设备管理 / Devices** → **生成 / Create**, fill the device name.
+     Use generic names — never personal identifiers. Suggested examples:
+     `phone-1`, `tablet-1`, `laptop-1`, `home-router`.
+   - Open the device, click **📋 订阅 URL** → copy the format that matches
+     the client (see table below)
+   - Paste the URL into the client's subscription / import dialog
+     (Type: Subscribe in Shadowrocket; Profiles → Import URL in Stash; etc.)
+
+### Subscription URL formats
+
+Each device exposes its own URL prefix at `/api/sub/{sub_token}` (the
+`sub_token` is the per-device public auth — admin token is **not** in this
+URL, so it's safe to put in a router). Five extension-suffixed variants
+are generated on-the-fly from the same per-device row:
+
+| URL suffix                | Format          | Tested clients                                    |
+| ------------------------- | --------------- | ------------------------------------------------- |
+| *(none, default)*         | URI list        | sing-box-iOS, Shadowrocket (Type: Subscribe), Hiddify |
+| `/sub.txt`                | URI list        | Same as default — `.txt` alias for clients that key on extension |
+| `/clash.yaml`             | Mihomo / Clash  | Stash, Clash for iOS, Clash Verge (macOS/Win), Clash for Android |
+| `/merlin.yaml`            | Clash + `tun:`  | AsusWRT-Merlin with Clash on the router (transparent proxy) |
+| `/shadowrocket.conf`      | Surge `.conf`   | Shadowrocket native parser (fallback when URI list misbehaves)   |
+
+If the user is in doubt, the default (URI list) is the right choice for
+phones and laptops — Clash YAML is mainly for routers and Stash power-users.
 
 ## Anti-patterns (do NOT do these)
 
