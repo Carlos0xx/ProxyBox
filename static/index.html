@@ -3089,20 +3089,25 @@ async function rotateToken() {
    ================================================================= */
 async function loadBans() {
   const d = await api('/api/bans');
-  $('kpi-sec').textContent = d.current_banned;
-  $('kpi-sec-sub').textContent = `${d.total_banned} 历史 · ${d.failures_24h} 攻击 / 24h`;
-  $('badge-sec').textContent = d.current_banned;
-  $('sec-current').textContent = d.current_banned;
-  $('sec-total').textContent = d.total_banned;
-  $('sec-fails').textContent = d.failures_24h;
-  $('ban-sub').textContent = `共 ${d.banned_ips.length} 个`;
-  $('kpi-sec-icon').className = 'kpi-icon ' + (d.current_banned > 0 ? 'danger' : 'accent');
+  // /api/bans v0.1.x returns: {jail, currently_banned, total_banned, banned}.
+  // BWG's failures_24h field is not exposed.
+  const cur = d.currently_banned ?? 0;
+  const tot = d.total_banned ?? 0;
+  const banned = d.banned ?? [];
+  $('kpi-sec').textContent = cur;
+  $('kpi-sec-sub').textContent = `${tot} 历史 · — 攻击 / 24h`;
+  $('badge-sec').textContent = cur;
+  $('sec-current').textContent = cur;
+  $('sec-total').textContent = tot;
+  $('sec-fails').textContent = '—';
+  $('ban-sub').textContent = `共 ${banned.length} 个`;
+  $('kpi-sec-icon').className = 'kpi-icon ' + (cur > 0 ? 'danger' : 'accent');
   const list = $('ban-list');
-  if (!d.banned_ips.length) {
+  if (!banned.length) {
     list.innerHTML = '<div class="empty-state"><span class="empty-icon">✅</span><div class="empty-desc">无活跃封禁</div></div>';
     return;
   }
-  list.innerHTML = d.banned_ips.map(b => `
+  list.innerHTML = banned.map(b => `
     <div class="conn-row-main" style="border-bottom: 1px solid var(--border-subtle); cursor: default; grid-template-columns: 1fr auto auto;">
       <div>
         <div class="conn-name mono" style="color: var(--danger);">${escapeHtml(b.ip)}</div>

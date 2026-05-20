@@ -21,13 +21,19 @@ router = APIRouter(
     tags=["ui"],
 )
 
+_NO_CACHE_HEADERS = {
+    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+    "Pragma": "no-cache",
+}
+
 
 @router.get("/", response_class=HTMLResponse, include_in_schema=False)
 @router.get("", response_class=HTMLResponse, include_in_schema=False)
-async def index(token: Annotated[str, Path()]) -> str:
+async def index(token: Annotated[str, Path()]) -> HTMLResponse:
     spa = get_settings().paths.static_dir / "index.html"
     if not spa.exists():
         raise HTTPException(
             500, f"SPA not found at {spa} — ship static/ directory or set paths.static_dir"
         )
-    return spa.read_text(encoding="utf-8").replace("{{TOKEN}}", token)
+    body = spa.read_text(encoding="utf-8").replace("{{TOKEN}}", token)
+    return HTMLResponse(content=body, headers=_NO_CACHE_HEADERS)
