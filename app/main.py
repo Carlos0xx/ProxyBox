@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.config import get_settings
 from app.db.init import init_schema
 from app.routers import actions, bans, devices, history, subscriptions, system, traffic
 
@@ -31,6 +32,15 @@ def create_app() -> FastAPI:
     app.include_router(bans.action_router)
     app.include_router(actions.router)
     app.include_router(actions.api_router)
+
+    # Passkey routes are opt-in — only loaded (and webauthn dep imported) when
+    # features.passkey == true. config.passkey.rp_id / origin must be set.
+    if get_settings().features.passkey:
+        from app.auth import passkey
+
+        app.include_router(passkey.make_public_router())
+        app.include_router(passkey.make_admin_router())
+
     return app
 
 

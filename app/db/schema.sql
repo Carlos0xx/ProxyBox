@@ -42,3 +42,16 @@ CREATE TABLE IF NOT EXISTS traffic_log (
 
 CREATE INDEX IF NOT EXISTS traffic_log_bucket_idx ON traffic_log (bucket_ts);
 CREATE INDEX IF NOT EXISTS traffic_log_date_idx   ON traffic_log (date);
+
+
+-- WebAuthn passkey credentials. Populated only when features.passkey is on
+-- and a user has registered at least one device. ``public_key`` is the
+-- COSE-encoded public key from the authenticator's attestation.
+CREATE TABLE IF NOT EXISTS passkey_credential (
+    credential_id  TEXT     PRIMARY KEY,
+    public_key     BLOB     NOT NULL,
+    sign_count     INTEGER  NOT NULL DEFAULT 0,
+    label          TEXT     NOT NULL DEFAULT '',
+    created_at     INTEGER  NOT NULL,
+    last_used_at   INTEGER
+);

@@ -24,6 +24,7 @@ paths:
   static_dir: /opt/proxybox/static
   sub_dir: /var/www/proxybox-sub
   singbox_config: /etc/sing-box/config.json
+  session_secret: /etc/proxybox/session-secret
 
 services:
   # systemd unit names probed by GET /api/status.
@@ -54,9 +55,19 @@ worker:
   poll_interval: 10
   retention_days: 7
 
+passkey:
+  # WebAuthn relying-party identity. Required when features.passkey = true.
+  # rp_id    must match the public-facing host (no scheme, no port).
+  # origin   is the full https:// URL the SPA is served from.
+  # Browsers require HTTPS — set up Caddy + Let's Encrypt first.
+  rp_id: ""
+  rp_name: "ProxyBox"
+  origin: ""
+
 features:
-  # WebAuthn passkey auth (planned for v0.2.0). When false, only URL-path
-  # token auth is active.
+  # WebAuthn passkey auth as an alternative to URL-path token. When true,
+  # a valid session cookie (issued post-login) is accepted in place of the
+  # token in /admin/{token}/.../ URLs. Requires HTTPS in production.
   passkey: false
 
   # Telegram bot module (proxybox-bot.service). Set bot token via TG_BOT_TOKEN

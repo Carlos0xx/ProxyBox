@@ -54,6 +54,7 @@ class PathsSettings(BaseModel):
     static_dir: Path = Path("/opt/proxybox/static")
     sub_dir: Path = Path("/var/www/proxybox-sub")
     singbox_config: Path = Path("/etc/sing-box/config.json")
+    session_secret: Path = Path("/etc/proxybox/session-secret")
 
 
 class ServicesSettings(BaseModel):
@@ -74,8 +75,6 @@ class PortsSettings(BaseModel):
 
 
 class ClashSettings(BaseModel):
-    # sing-box exposes a Clash-compatible /connections endpoint when
-    # experimental.clash_api.external_controller is set in sing-box config.
     api_url: str = "http://127.0.0.1:9090"
     api_secret: str = ""
 
@@ -83,6 +82,15 @@ class ClashSettings(BaseModel):
 class WorkerSettings(BaseModel):
     poll_interval: int = 10
     retention_days: int = 7
+
+
+class PasskeySettings(BaseModel):
+    # WebAuthn relying-party identity. rp_id is the host portion (no scheme,
+    # no port) — must match the browser-visible domain. origin is the full
+    # https:// URL the SPA is served from.
+    rp_id: str = ""
+    rp_name: str = "ProxyBox"
+    origin: str = ""
 
 
 class FeaturesSettings(BaseModel):
@@ -98,6 +106,7 @@ class AppConfig(BaseModel):
     ports: PortsSettings = Field(default_factory=PortsSettings)
     clash: ClashSettings = Field(default_factory=ClashSettings)
     worker: WorkerSettings = Field(default_factory=WorkerSettings)
+    passkey: PasskeySettings = Field(default_factory=PasskeySettings)
     features: FeaturesSettings = Field(default_factory=FeaturesSettings)
 
     @classmethod

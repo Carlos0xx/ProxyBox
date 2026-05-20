@@ -17,6 +17,8 @@ dependencies = [
     "pydantic>=2.9",
     "pyyaml>=6.0",
     "cryptography>=42.0",
+    "itsdangerous>=2.2",
+    "webauthn>=2.0",
 ]
 
 [project.optional-dependencies]
