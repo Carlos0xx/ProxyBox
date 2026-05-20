@@ -3055,18 +3055,29 @@ if ($('dev-filter')) $('dev-filter').addEventListener('change', loadDevices);
    VIEW LOADERS — Endpoints (订阅链接)
    ================================================================= */
 async function loadSubs() {
-  // /api/subs (list-all) not implemented in v0.1.x — per-device subs are at /api/devices/{name}/subs.
-  const d = { token: '—', urls: [] };
-  $('endpoint-token').textContent = d.token;
-  $('endpoints-list').innerHTML = d.urls.map(u => {
-    const [name, sub] = CLIENT_NAMES[u.file] || [u.file, ''];
+  // v0.1.x model: each device has its own sub_token. There is no global token,
+  // so the "当前 Token" card shows the model name and the list shows one row
+  // per device with the public /api/sub/{sub_token} URL.
+  $('endpoint-token').textContent = '每设备独立 sub_token (v0.1.x)';
+  const d = await api('/api/devices/list');
+  const devices = (d.devices || []).filter(x => !x.revoked);
+  const list = $('endpoints-list');
+  if (!devices.length) {
+    list.innerHTML = '<div class="empty-state"><span class="empty-icon">📭</span><div class="empty-desc">尚无设备。先到「设备管理」新建一个</div></div>';
+    return;
+  }
+  const origin = window.location.origin;
+  list.innerHTML = devices.map(dev => {
+    const subUrl = `${origin}/api/sub/${dev.sub_token}`;
+    const displayName = dev.label || dev.name;
+    const kindIcon = {router:'🌐', mobile:'📱', tablet:'📱', laptop:'💻', other:'📦'}[dev.kind] || '📦';
     return `<div class="sub-row">
       <div>
-        <div class="sub-name">${escapeHtml(name)}</div>
-        <div class="sub-name-sub">${escapeHtml(sub)} · ${(u.size/1024).toFixed(1)} KB</div>
+        <div class="sub-name">${kindIcon} ${escapeHtml(displayName)}</div>
+        <div class="sub-name-sub mono">${escapeHtml(dev.name)} · sub_token ${escapeHtml(dev.sub_token.slice(0, 8))}…</div>
       </div>
-      <div class="sub-url-box" title="${escapeHtml(u.url)}">${escapeHtml(u.url)}</div>
-      <button class="btn btn-sm" onclick="copyText(this, ${JSON.stringify(u.url)})">
+      <div class="sub-url-box" title="${escapeHtml(subUrl)}">${escapeHtml(subUrl)}</div>
+      <button class="btn btn-sm" onclick="copyText(this, ${JSON.stringify(subUrl)})">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
         复制
       </button>
