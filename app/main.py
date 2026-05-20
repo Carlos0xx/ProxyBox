@@ -14,19 +14,6 @@ from fastapi import FastAPI
 
 from app.config import get_settings
 from app.db.init import init_schema
-
-
-def _version() -> str:
-    """Pull the canonical version from the installed package metadata so
-    pyproject.toml stays the single source of truth — avoids the drift
-    release-audit.sh flagged before."""
-    try:
-        return _pkg_version("proxybox")
-    except PackageNotFoundError:
-        return "0.0.0-dev"
-
-
-VERSION = _version()
 from app.routers import (
     account,
     actions,
@@ -43,6 +30,19 @@ from app.routers import (
 from app.routers import (
     https as https_router,
 )
+
+
+def _version() -> str:
+    """Pull the canonical version from the installed package metadata so
+    pyproject.toml stays the single source of truth — avoids the drift
+    release-audit.sh flagged before."""
+    try:
+        return _pkg_version("proxybox")
+    except PackageNotFoundError:
+        return "0.0.0-dev"
+
+
+VERSION = _version()
 
 
 @asynccontextmanager
