@@ -24,3 +24,21 @@ CREATE TABLE IF NOT EXISTS device (
 
 CREATE INDEX IF NOT EXISTS device_revoked_idx   ON device (revoked);
 CREATE INDEX IF NOT EXISTS device_last_seen_idx ON device (last_seen);
+
+
+-- Per-device traffic accounting, populated by app.workers.traffic.
+-- One row per (device, UTC hour). Bytes are cumulative within the bucket.
+-- bucket_ts is the UTC unix epoch of the hour's start (e.g. 2026-05-20 15:00 UTC).
+CREATE TABLE IF NOT EXISTS traffic_log (
+    device_name  TEXT    NOT NULL,
+    bucket_ts    INTEGER NOT NULL,
+    date         TEXT    NOT NULL,
+    hour         INTEGER NOT NULL,
+    rx_bytes     INTEGER NOT NULL DEFAULT 0,
+    tx_bytes     INTEGER NOT NULL DEFAULT 0,
+    conn_count   INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (device_name, bucket_ts)
+);
+
+CREATE INDEX IF NOT EXISTS traffic_log_bucket_idx ON traffic_log (bucket_ts);
+CREATE INDEX IF NOT EXISTS traffic_log_date_idx   ON traffic_log (date);

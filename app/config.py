@@ -46,9 +46,6 @@ class AdminSettings(BaseModel):
 
 
 class ServerSettings(BaseModel):
-    # Public host (IP or domain) clients use to reach this VPS.
-    # Embedded into subscription URIs so phones can connect.
-    # install.sh should auto-detect via ifconfig.me; falls back to manual edit.
     public_host: str = ""
 
 
@@ -76,6 +73,18 @@ class PortsSettings(BaseModel):
     hy2_range: tuple[int, int] = (21001, 21050)
 
 
+class ClashSettings(BaseModel):
+    # sing-box exposes a Clash-compatible /connections endpoint when
+    # experimental.clash_api.external_controller is set in sing-box config.
+    api_url: str = "http://127.0.0.1:9090"
+    api_secret: str = ""
+
+
+class WorkerSettings(BaseModel):
+    poll_interval: int = 10
+    retention_days: int = 7
+
+
 class FeaturesSettings(BaseModel):
     passkey: bool = False
     bot: bool = False
@@ -87,6 +96,8 @@ class AppConfig(BaseModel):
     paths: PathsSettings = Field(default_factory=PathsSettings)
     services: ServicesSettings = Field(default_factory=ServicesSettings)
     ports: PortsSettings = Field(default_factory=PortsSettings)
+    clash: ClashSettings = Field(default_factory=ClashSettings)
+    worker: WorkerSettings = Field(default_factory=WorkerSettings)
     features: FeaturesSettings = Field(default_factory=FeaturesSettings)
 
     @classmethod

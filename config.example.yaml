@@ -42,6 +42,18 @@ ports:
   vless_range: [11001, 11050]
   hy2_range:   [21001, 21050]
 
+clash:
+  # sing-box must have experimental.clash_api.external_controller set for
+  # the traffic worker to fetch /connections. The api_url here must match.
+  api_url: "http://127.0.0.1:9090"
+  api_secret: ""
+
+worker:
+  # Traffic worker poll interval (seconds) and retention (days).
+  # Lower poll = more accurate but more DB writes. 10s is a sane default.
+  poll_interval: 10
+  retention_days: 7
+
 features:
   # WebAuthn passkey auth (planned for v0.2.0). When false, only URL-path
   # token auth is active.
