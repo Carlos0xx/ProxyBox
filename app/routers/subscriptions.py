@@ -1,8 +1,21 @@
-"""Public subscription endpoint — sub_token IS the auth, no admin token required.
+"""Public subscription endpoints — sub_token IS the auth, no admin token required.
 
-Clients (Shadowrocket, sing-box, Hiddify, ...) fetch the URI list via HTTP GET.
-The path validator constrains sub_token to hex/base64-safe chars so the URL
-can never be tricked into traversing the filesystem.
+Clients (Shadowrocket, sing-box, Hiddify, Stash, Clash for iOS, Merlin) fetch
+the appropriate format via HTTP GET. The path validator constrains sub_token
+to hex/base64-safe chars so the URL can never be tricked into traversing the
+filesystem.
+
+Format selection:
+  /api/sub/{sub_token}                  — URI list (default, sing-box family)
+  /api/sub/{sub_token}/sub.txt          — same URI list, .txt alias for clients
+                                           that look at extension
+  /api/sub/{sub_token}/clash.yaml       — Mihomo / Clash for iOS / Stash YAML
+  /api/sub/{sub_token}/merlin.yaml      — Clash YAML with tun: enable: true
+                                           (AsusWRT-Merlin transparent proxy)
+  /api/sub/{sub_token}/shadowrocket.conf — Surge-format .conf
+
+For non-URI formats the device row is re-queried by sub_token and the file
+is built on the fly (no extra disk writes on device create / regen).
 """
 
 from __future__ import annotations
@@ -10,13 +23,28 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Path
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, Response
 
-from app.services import subscriptions
+from app.db.connection import connection
+from app.services import singbox, subscriptions
 
 router = APIRouter(prefix="/api/sub", tags=["subscriptions"])
 
 SubTokenInPath = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{8,64}$")]
+
+
+def _device_by_sub_token(sub_token: str) -> dict:
+    with connection() as conn:
+        row = conn.execute(
+            "SELECT name, label, kind, vless_uuid, hy2_password, vless_port, hy2_port, "
+            "sni, sub_token, revoked, paused_until FROM device WHERE sub_token = ?",
+            (sub_token,),
+        ).fetchone()
+    if row is None:
+        raise HTTPException(404, "subscription not found")
+    if row["revoked"]:
+        raise HTTPException(410, "subscription revoked")
+    return dict(row)
 
 
 @router.get("/{sub_token}", response_class=PlainTextResponse)
@@ -25,3 +53,31 @@ async def get_subscription(sub_token: SubTokenInPath) -> str:
     if content is None:
         raise HTTPException(404, "subscription not found")
     return content
+
+
+@router.get("/{sub_token}/sub.txt", response_class=PlainTextResponse)
+async def get_subscription_txt(sub_token: SubTokenInPath) -> str:
+    content = subscriptions.read_subscription(sub_token)
+    if content is None:
+        raise HTTPException(404, "subscription not found")
+    return content
+
+
+@router.get("/{sub_token}/clash.yaml")
+async def get_clash_yaml(sub_token: SubTokenInPath) -> Response:
+    device = _device_by_sub_token(sub_token)
+    body = subscriptions.build_clash_yaml(device, singbox.read_config(), with_tun=False)
+    return Response(content=body, media_type="text/yaml")
+
+
+@router.get("/{sub_token}/merlin.yaml")
+async def get_merlin_yaml(sub_token: SubTokenInPath) -> Response:
+    device = _device_by_sub_token(sub_token)
+    body = subscriptions.build_clash_yaml(device, singbox.read_config(), with_tun=True)
+    return Response(content=body, media_type="text/yaml")
+
+
+@router.get("/{sub_token}/shadowrocket.conf", response_class=PlainTextResponse)
+async def get_shadowrocket_conf(sub_token: SubTokenInPath) -> str:
+    device = _device_by_sub_token(sub_token)
+    return subscriptions.build_shadowrocket_conf(device, singbox.read_config())

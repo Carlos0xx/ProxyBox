@@ -3584,7 +3584,7 @@ async function showDeviceSubs(name) {
   if (!dev) { toast.error('未找到设备', name); return; }
   const subToken = dev.sub_token;
   if (!subToken) { toast.error('设备无 sub_token', name); return; }
-  const subUrl = `${location.protocol}//${location.host}/api/sub/${subToken}`;
+  const baseUrl = `${location.protocol}//${location.host}/api/sub/${subToken}`;
   const kindIcons = {router: '🌐', mobile: '📱', tablet: '📱', laptop: '💻', other: '📦'};
   const icon = kindIcons[dev.kind] || '📦';
   const isLegacy = !dev.vless_port;
@@ -3593,10 +3593,16 @@ async function showDeviceSubs(name) {
     ? 'vless (legacy share)'
     : `vless :${dev.vless_port} · hy2 :${dev.hy2_port}`;
 
-  // v0.1.x serves a single plain-text URI list (vless:// + hy2://).
-  // All sing-box / Shadowrocket / Hiddify / Stash clients consume this as
-  // "Type: Subscribe". BWG's per-client formats (clash.yaml, merlin.yaml,
-  // shadowrocket.conf) are not generated.
+  // v0.1.x serves the URI list at the base path and four extension-suffixed
+  // alternates (sub.txt / clash.yaml / merlin.yaml / shadowrocket.conf).
+  // Built on-the-fly by the subscription router, no extra files on disk.
+  const urls = [
+    { file: '',                   label: 'sing-box / Shadowrocket (推荐)', hint: '📱 iOS · Type: Subscribe · 通用 URI 列表',  prefer: true },
+    { file: '/clash.yaml',        label: 'Stash / Clash for iOS',          hint: '📱 iOS · macOS · Android',                  prefer: false },
+    { file: '/merlin.yaml',       label: 'Merlin Clash 路由器',             hint: '🌐 路由器 · 内置 tun: enable: true',         prefer: false },
+    { file: '/shadowrocket.conf', label: 'Shadowrocket .conf (备用)',      hint: '⚠️ Surge 格式, Reality 解析依赖客户端版本',  prefer: false },
+    { file: '/sub.txt',           label: 'URI 列表 (.txt 别名)',           hint: '👀 与默认链接同内容, 部分客户端按扩展名识别',   prefer: false },
+  ];
 
   // Build inline dialog (using our existing dialog backdrop but with custom content)
   const bd = $('dialog-backdrop');
@@ -3629,24 +3635,29 @@ async function showDeviceSubs(name) {
       </div>
 
       <div style="display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-3);">
-        <div style="border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3); background: var(--bg-elevated);">
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-1);">
-            <div style="display: flex; flex-direction: column; gap: 0; min-width: 0;">
-              <div style="font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--text-1);">订阅 URL <span class="badge badge-accent" style="font-size: 9px; padding: 1px 6px;">通用</span></div>
-              <div style="font-size: var(--text-2xs); color: var(--text-4); font-family: var(--font-mono);">📱 sing-box / Shadowrocket / Hiddify / Stash — 选「Type: Subscribe」</div>
+        ${urls.map(u => {
+          const fullUrl = `${baseUrl}${u.file}`;
+          return `
+          <div style="border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3); background: var(--bg-elevated);">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-1);">
+              <div style="display: flex; flex-direction: column; gap: 0; min-width: 0;">
+                <div style="font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--text-1);">${escapeHtml(u.label)}${u.prefer ? ' <span class="badge badge-accent" style="font-size: 9px; padding: 1px 6px;">推荐</span>' : ''}</div>
+                <div style="font-size: var(--text-2xs); color: var(--text-4); font-family: var(--font-mono);">${escapeHtml(u.hint)}</div>
+              </div>
+              <button class="btn btn-sm btn-primary" onclick="copySubUrl(this, ${JSON.stringify(fullUrl)}, ${JSON.stringify(u.label)})" style="flex-shrink: 0;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                复制
+              </button>
             </div>
-            <button class="btn btn-sm btn-primary" onclick="copySubUrl(this, '${escapeHtml(subUrl)}', '订阅 URL')" style="flex-shrink: 0;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-              复制
-            </button>
-          </div>
-          <div style="background: var(--bg-canvas); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 4px var(--space-2); font-family: var(--font-mono); font-size: 10px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: all;" title="${escapeHtml(subUrl)}">
-            ${escapeHtml(subUrl)}
-          </div>
-        </div>
+            <div style="background: var(--bg-canvas); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 4px var(--space-2); font-family: var(--font-mono); font-size: 10px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: all;" title="${escapeHtml(fullUrl)}" onclick="this.style.whiteSpace = this.style.whiteSpace === 'normal' ? 'nowrap' : 'normal'; this.style.wordBreak = 'break-all'">
+              ${escapeHtml(fullUrl)}
+            </div>
+          </div>`;
+        }).join('')}
       </div>
 
       <div style="display: flex; gap: var(--space-2); padding: var(--space-2) 0 var(--space-4); border-top: 1px solid var(--border-default); margin-top: var(--space-2);">
+        <button class="btn btn-sm" onclick="copyAllSubUrls(${JSON.stringify(baseUrl)})">📋 复制全部 URL</button>
         ${!isLegacy ? `<button class="btn btn-sm" onclick="closeDialog(); rotateDeviceToken('${escapeHtml(name)}')">🔄 换 URL</button>` : ''}
       </div>
     </div>
@@ -3720,6 +3731,19 @@ function copySubUrl(btn, url, label) {
     setTimeout(() => { btn.innerHTML = orig; }, 1200);
     toast.success('已复制', label);
   }).catch(e => toast.error('复制失败', e.message));
+}
+
+function copyAllSubUrls(baseUrl) {
+  const lines = [
+    `default (sing-box / Shadowrocket): ${baseUrl}`,
+    `clash.yaml:        ${baseUrl}/clash.yaml`,
+    `merlin.yaml:       ${baseUrl}/merlin.yaml`,
+    `shadowrocket.conf: ${baseUrl}/shadowrocket.conf`,
+    `sub.txt:           ${baseUrl}/sub.txt`,
+  ];
+  navigator.clipboard.writeText(lines.join('\n'))
+    .then(() => toast.success('全部已复制', '5 个 URL'))
+    .catch(e => toast.error('复制失败', e.message));
 }
 
 async function renameDevicePrompt(name, currentLabel) {
