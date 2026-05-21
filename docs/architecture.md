@@ -115,7 +115,7 @@ Single SQLite file at `/var/lib/proxybox/traffic.db`, WAL mode, four tables.
 
 ```sql
 CREATE TABLE device (
-  name          TEXT     PRIMARY KEY,    -- "phone-1", "laptop-1", etc.
+  name          TEXT     PRIMARY KEY,    -- "device-1", "laptop-1", etc.
   label         TEXT     NOT NULL,        -- human-friendly display name
   kind          TEXT     NOT NULL,        -- "mobile" / "desktop" / "router"
   vless_uuid    TEXT     NOT NULL,        -- 128-bit RFC 4122 v4
@@ -222,7 +222,7 @@ CREATE TABLE passkey_credential (      -- opt-in
 | **Reality cover-domain** | Random pick from a small pool of well-known TLS-fronted sites per install | No shared fingerprint across deployments. |
 | **Host categorisation** | Suffix → app_group lookup (~120 entries, no DNS calls) | Privacy: no per-request DNS lookup; performance: O(1) per host. |
 | **HTTPS provisioning** | Caddy + Let's Encrypt, triggered from the SPA | One click instead of an SSH session for a non-technical user. |
-| **`install.sh` idempotency** | Every step gated by an existence check | Safe to re-run; partial failures resume cleanly. |
+| **`install.sh` fresh/reuse modes** | `--fresh` clears ProxyBox-managed state; default reuse keeps devices and history | Template installs avoid old traces, while upgrades stay non-destructive. |
 | **i18n** | Phrase → phrase dict + MutationObserver | No source-code annotation of every Chinese string; topbar toggle reloads via cookie + `localStorage`. |
 
 ---

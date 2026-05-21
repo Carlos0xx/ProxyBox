@@ -19,6 +19,7 @@ import contextlib
 import json
 import os
 import secrets
+import shutil
 import subprocess
 import sys
 import urllib.error
@@ -33,6 +34,20 @@ SNI_CANDIDATES = (
     "www.cloudflare.com",
     "www.amazon.com",
 )
+
+
+def _truthy(value: str | None) -> bool:
+    return (value or "").lower() in {"1", "true", "yes", "on"}
+
+
+def _empty_dir(path: Path) -> None:
+    if not path.exists():
+        return
+    for child in path.iterdir():
+        if child.is_dir() and not child.is_symlink():
+            shutil.rmtree(child)
+        else:
+            child.unlink(missing_ok=True)
 
 
 def _write_private_text(path: Path, text: str, mode: int = 0o600) -> None:
@@ -231,8 +246,16 @@ features:
 def main() -> int:
     sb_dir = Path("/etc/sing-box")
     pb_dir = Path("/etc/proxybox")
-    sb_dir.mkdir(parents=True, exist_ok=True)
-    pb_dir.mkdir(parents=True, exist_ok=True)
+    data_dir = Path("/var/lib/proxybox")
+    sub_dir = Path("/var/www/proxybox-sub")
+
+    if _truthy(os.environ.get("PROXYBOX_FRESH")):
+        for path in (sb_dir, pb_dir, data_dir, sub_dir):
+            _empty_dir(path)
+        print("[bootstrap] fresh mode: cleared ProxyBox volumes", flush=True)
+
+    for path in (sb_dir, pb_dir, data_dir, sub_dir):
+        path.mkdir(parents=True, exist_ok=True)
     sb_dir.chmod(0o700)
     pb_dir.chmod(0o700)
 

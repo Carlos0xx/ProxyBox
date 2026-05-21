@@ -12,7 +12,7 @@ The `docker-compose.yml` at the repo root ships five services:
 
 | Service | Image | Role | Profile |
 | --- | --- | --- | --- |
-| `bootstrap` | `proxybox:local` | One-shot — generates `config.yaml` + `sing-box/config.json`. Exits 0 if both already exist. | default |
+| `bootstrap` | `proxybox:local` | One-shot — generates `config.yaml` + `sing-box/config.json`. With `PROXYBOX_FRESH=1`, clears ProxyBox volumes first. | default |
 | `sing-box` | `ghcr.io/sagernet/sing-box:latest` | The proxy. `network_mode: host`. | default |
 | `proxybox-admin` | `proxybox:local` | FastAPI admin on `:8080`. | default |
 | `proxybox-traffic-worker` | `proxybox:local` | Clash API polling. | default |
@@ -45,6 +45,15 @@ docker compose exec proxybox-admin \
 ```
 
 Open `http://<host>:8080/login/<login_path>` in a browser. Username `admin`, password as printed.
+
+For a no-trace reinstall on reused named volumes:
+
+```bash
+docker compose down
+PROXYBOX_FRESH=1 docker compose up -d
+```
+
+This clears ProxyBox config, sing-box config, traffic DB, and cached subscription files before bootstrap. For the usual stateful upgrade path, leave `PROXYBOX_FRESH` unset.
 
 ---
 

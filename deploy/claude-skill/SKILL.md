@@ -107,7 +107,7 @@ checkouts must be updated from `origin/main` explicitly so a stale
     $SUDO git -C /opt/proxybox pull --ff-only origin main
   elif [ -d /opt/proxybox ] && [ -n "$(ls -A /opt/proxybox 2>/dev/null)" ]; then
     echo "[skip] /opt/proxybox exists but is not a git checkout — leaving it alone"
-    echo "       if you want a fresh start, ssh in and: rm -rf /opt/proxybox, then re-run"
+    echo "       remove or move /opt/proxybox, then re-run; install.sh --fresh handles runtime state"
     exit 1
   else
     $SUDO git clone https://github.com/carlos0xx/proxybox /opt/proxybox
@@ -143,9 +143,9 @@ LANG_FLAG=zh  # use en if the user is not writing in Chinese
 "${SSH[@]}" "$USER@$HOST" "
   cd /opt/proxybox
   if [ \"\$(id -u)\" = \"0\" ]; then
-    bash deploy/install.sh --lang $LANG_FLAG
+    bash deploy/install.sh --fresh --lang $LANG_FLAG
   else
-    sudo bash deploy/install.sh --lang $LANG_FLAG
+    sudo bash deploy/install.sh --fresh --lang $LANG_FLAG
   fi
 "
 ```
@@ -159,10 +159,13 @@ conversation language rather than the server locale.
 the right invocation (`sudo` or not) without assuming `sudo` is installed
 (Debian minimal images don't ship it by default).
 
-This is idempotent — re-running on an already-installed system reuses
-the existing first device instead of creating a duplicate. Relay the
-final summary verbatim — Step 6 / Step 8 below explain why the full
-admin URL is okay to quote in this context.
+The default skill path is for fresh/template VPS installs and passes
+`--fresh`, so old ProxyBox config, devices, subscription files, systemd units,
+and managed HTTPS config are cleared before new credentials are generated. If
+the user explicitly asks to preserve an existing ProxyBox install, omit
+`--fresh` and say that the install will reuse existing state. Relay the final
+summary verbatim — Step 6 / Step 8 below explain why the full admin URL is okay
+to quote in this context.
 
 ### Step 5 — Verify
 
@@ -190,8 +193,9 @@ handoff block:
     against /login bot scans)
   - `用户名    admin`
   - `密  码    <16-char alnum>`
-- The auto-created first device (default name `phone-1`, override via env
-  `PROXYBOX_FIRST_DEVICE=<name>` before re-running install.sh)
+- The auto-created first device (default name `device-1`, override via env
+  `PROXYBOX_FIRST_DEVICE=<name>` before running install.sh; set it to an empty
+  string to skip auto-creation)
 - All 5 per-device subscription URLs ready to copy
 
 **Do not re-mask the credentials in chat output for this skill.** The
@@ -273,9 +277,12 @@ Concretely, the user can:
 4. **Traffic should flow** through the VPS — `ifconfig.me` from the
    client device shows the VPS IP, not the home ISP.
 
-The default first device is named `phone-1`. Override via env
-`PROXYBOX_FIRST_DEVICE=tablet-1 bash deploy/install.sh ...` before
-install, or rename in the admin UI afterwards.
+The default first device is named `device-1`. Override via env
+`PROXYBOX_FIRST_DEVICE=tablet-1 bash deploy/install.sh ...` before install, or
+rename in the admin UI afterwards. `PROXYBOX_FIRST_DEVICE=` skips auto-creation.
+`PROXYBOX_FIRST_DEVICE=local-user` is supported only when the user explicitly
+asks for it; it uses `PROXYBOX_LOCAL_USERNAME` if provided, else the remote
+shell user, sanitized to the device-name format.
 
 ### Stuff the user can do AFTER login (no SSH needed)
 
@@ -294,7 +301,7 @@ handoff. v0.1.6+ exposes a lot in the panel:
   immediately 404s; existing sessions unaffected. Defends against
   `/login` brute-force.
 - **Add more devices:** 设备管理 → 生成. Generic naming convention:
-  `phone-1`, `phone-2`, `tablet-1`, `laptop-1`, `home-router`. **Never
+  `device-1`, `phone-2`, `tablet-1`, `laptop-1`, `home-router`. **Never
   use personal identifiers** — device names land in sing-box config
   + subscription file content, so they're surface for fingerprinting.
 - **Per-device subscription URLs (all 5 formats):** 订阅链接 page or
@@ -353,9 +360,10 @@ phones and laptops — Clash YAML is mainly for routers and Stash power-users.
   on port 8080, 11000-11050, or 21000-21050 — check `ss -tlnp` first
 - **Never** commit the generated `config.yaml`, `bot.env`, or `session-secret`
   to any git repository
-- **Don't** overwrite existing `/etc/proxybox/` or `/etc/sing-box/` content
-  silently — install.sh is idempotent and skips, but if the user wants a
-  fresh start, ask them to `rm -rf` those paths first
+- **Don't** omit `--fresh` for a fresh/template install — otherwise old
+  `/etc/proxybox/`, `/etc/sing-box/`, DB, subscription files, or systemd unit
+  state can be reused. Only omit `--fresh` when the user explicitly asks to
+  preserve an existing ProxyBox install.
 
 ## Reporting failures
 

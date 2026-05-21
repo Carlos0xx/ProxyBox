@@ -4,8 +4,12 @@
 #   docker compose up -d         # admin + worker + sing-box
 #   docker compose --profile bot up -d   # also start TG bot
 #
-# Read the admin token after first start:
-#   docker compose exec proxybox-admin cat /etc/proxybox/config.yaml | grep token
+# Read the generated login credentials after first start:
+#   docker compose exec proxybox-admin sh -c 'cat /etc/proxybox/admin.password; grep -E "username|login_path" /etc/proxybox/config.yaml'
+#
+# Fresh start on reused volumes:
+#   docker compose down
+#   PROXYBOX_FRESH=1 docker compose up -d
 #
 # Limitations vs install.sh: no fail2ban (host-level iptables not exposed
 # into container), no passkey (HTTPS reverse proxy not bundled). Pair this
@@ -21,8 +25,12 @@ services:
     image: proxybox:local
     restart: "no"
     command: ["python", "-m", "app.bootstrap"]
+    environment:
+      - PROXYBOX_FRESH=${PROXYBOX_FRESH:-0}
     volumes:
       - proxybox-config:/etc/proxybox
+      - proxybox-data:/var/lib/proxybox
+      - proxybox-sub:/var/www/proxybox-sub
       - singbox-config:/etc/sing-box
 
   sing-box:

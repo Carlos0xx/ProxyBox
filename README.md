@@ -45,7 +45,7 @@ mkdir -p ~/.claude/skills/proxybox-deploy
 cp -r deploy/claude-skill/* ~/.claude/skills/proxybox-deploy/
 ```
 
-Then in any session: *"deploy proxybox on my VPS at 1.2.3.4 using ~/.ssh/id_ed25519"*. The agent uses an auto-deleted temporary SSH `known_hosts` → runs a minimal VPS check → `git clone` / update → full pre-flight with Python 3.11 provisioning → `install.sh` → service verification → hands back the login URL + credentials.
+Then in any session: *"deploy proxybox on my VPS at 1.2.3.4 using ~/.ssh/id_ed25519"*. The agent uses an auto-deleted temporary SSH `known_hosts` → runs a minimal VPS check → `git clone` / update → full pre-flight with Python 3.11 provisioning → `install.sh --fresh` → service verification → hands back the login URL + credentials.
 
 For Codex or other agents, point them at [`deploy/claude-skill/SKILL.md`](./deploy/claude-skill/SKILL.md) — the instructions are framework-agnostic.
 
@@ -55,10 +55,10 @@ For Codex or other agents, point them at [`deploy/claude-skill/SKILL.md`](./depl
 ssh root@<your-vps>
 apt-get update && apt-get install -y git curl ca-certificates
 git clone https://github.com/carlos0xx/proxybox /opt/proxybox
-cd /opt/proxybox && bash deploy/install.sh
+cd /opt/proxybox && bash deploy/install.sh --fresh
 ```
 
-Idempotent. Generates Reality keypair, Hy2 cert, random 16-char admin password. Auto-creates the first device. Prints **login URL · username · password · 5 subscription URLs** in a single block.
+Fresh mode clears old ProxyBox-managed state first, then generates a Reality keypair, Hy2 cert, random 16-char admin password, and a generic first device. Omit `--fresh` only when intentionally preserving an existing ProxyBox install.
 
 ### C · Docker Compose
 
@@ -68,6 +68,8 @@ docker compose up -d
 ```
 
 Multi-arch images at `ghcr.io/carlos0xx/proxybox:latest`. No fail2ban or HTTPS UI on this path — pair with Caddy + a host firewall for production.
+
+For reused Docker volumes, stop the stack first, then run `PROXYBOX_FRESH=1 docker compose up -d` to clear old ProxyBox state before bootstrap.
 
 > [!IMPORTANT]
 > The installer prints login URL + password **once**. Copy them into a password manager before closing the terminal. Recovery via SSH: `cat /etc/proxybox/admin.password` (mode 0400) for the password, `/etc/proxybox/config.yaml` for the rest.

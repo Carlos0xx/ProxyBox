@@ -48,10 +48,10 @@ ssh root@<your-vps>
 apt-get update && apt-get install -y git curl ca-certificates
 git clone https://github.com/carlos0xx/proxybox /opt/proxybox
 cd /opt/proxybox
-bash deploy/install.sh --lang en        # --lang zh for Chinese output
+bash deploy/install.sh --fresh --lang en        # --lang zh for Chinese output
 ```
 
-The installer is idempotent — safe to re-run mid-way. It performs:
+Fresh mode clears old ProxyBox-managed state first. It performs:
 
 1. **Pre-flight validation** via `deploy/check-prereqs.sh --install` (9 categories: OS, arch, privilege, RAM, disk, network, systemd, ports, apt deps) and Python 3.11 provisioning.
 2. **apt install** of runtime dependencies (`python3.11`, `python3.11-venv`, `curl`, `sqlite3`, `openssl`, `fail2ban`).
@@ -59,7 +59,7 @@ The installer is idempotent — safe to re-run mid-way. It performs:
 4. **Crypto generation** — Reality keypair, Hy2 self-signed cert, random SNI picked per install.
 5. **Config writes** — `/etc/sing-box/config.json` and `/etc/proxybox/config.yaml` (mode 0600, root-owned).
 6. **systemd units** — `sing-box`, `proxybox-admin`, `proxybox-traffic-worker`, `proxybox-bot` (bot stays disabled until configured).
-7. **Auto-create the first device** — default name `phone-1` (override with env var `PROXYBOX_FIRST_DEVICE=<name>`).
+7. **Auto-create the first device** — default name `device-1` (override with env var `PROXYBOX_FIRST_DEVICE=<name>`, or set it empty to skip).
 8. **Print the handoff** — the login URL, username, password, and 5 subscription URLs in a single self-contained block.
 
 > [!IMPORTANT]
@@ -82,7 +82,7 @@ docker compose exec proxybox-admin \
     sh -c 'cat /etc/proxybox/admin.password; grep -E "username|login_path" /etc/proxybox/config.yaml'
 ```
 
-A one-shot `bootstrap` container generates `config.yaml` on first start. Volumes preserve state across `docker compose down`/`up`.
+A one-shot `bootstrap` container generates `config.yaml` on first start. Volumes preserve state across `docker compose down`/`up`; stop the stack, then use `PROXYBOX_FRESH=1 docker compose up -d` to clear old ProxyBox volumes before bootstrap.
 
 To also run the Telegram bot:
 
@@ -109,7 +109,7 @@ Full reference: [`deploy/docker.md`](./deploy/docker.md).
 
 2. **Enter `admin` + the printed password.** A session cookie is set for 30 days; you land in the SPA.
 
-3. **The first device is already created** (`phone-1` by default). Open the **Endpoints** page from the side nav. Five URLs are listed:
+3. **The first device is already created** (`device-1` by default). Open the **Endpoints** page from the side nav. Five URLs are listed:
 
    | Format | Best for |
    | --- | --- |

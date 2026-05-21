@@ -1,6 +1,6 @@
 # `deploy/install.sh`
 
-> The one-shot Bash installer. Idempotent. Provisions a full ProxyBox stack on Debian / Ubuntu in ~3 minutes.
+> The one-shot Bash installer. Fresh mode wipes ProxyBox-managed state before provisioning; reuse mode stays idempotent for upgrades.
 
 For the high-level walkthrough, see [Getting started · Path 1](../getting-started.md#path-1--installsh-nbsprecommended-for-linux-vps).
 
@@ -13,7 +13,7 @@ ssh root@<your-vps>
 apt-get update && apt-get install -y git curl ca-certificates
 git clone https://github.com/carlos0xx/proxybox /opt/proxybox
 cd /opt/proxybox
-bash deploy/install.sh --lang en        # --lang zh for Chinese output
+bash deploy/install.sh --fresh --lang en   # --lang zh for Chinese output
 ```
 
 If you connect as a non-root user with passwordless `sudo`, run the same
@@ -22,9 +22,12 @@ changes.
 
 | Flag | Effect |
 | --- | --- |
+| `--fresh` / `PROXYBOX_FRESH=1` | Stop ProxyBox services, remove ProxyBox-managed config/data/subscriptions/systemd units/managed Caddyfile, then generate a new identity. |
+| `--reuse` / `--no-fresh` | Keep existing ProxyBox state. This is the default for manual reruns and upgrades. |
 | `--lang en` / `--lang zh` | Force language. Default: auto-detect from `$LANG`. |
 | `-h` / `--help` | Print the header comment and exit. |
-| `PROXYBOX_FIRST_DEVICE=<name>` *(env)* | Override the auto-created first device (default `phone-1`). |
+| `PROXYBOX_FIRST_DEVICE=<name>` *(env)* | Override the auto-created first device (default `device-1`). Set it to an empty string to skip auto-creation. |
+| `PROXYBOX_FIRST_DEVICE=local-user` *(env)* | Opt-in username-based device name. Uses `PROXYBOX_LOCAL_USERNAME` if set, otherwise the remote shell user, then sanitizes it. |
 | `PROXYBOX_LANG=<en\|zh>` *(env)* | Same as `--lang`. |
 
 ---
@@ -68,7 +71,7 @@ sudo bash deploy/check-prereqs.sh --install  # also apt-install missing apt deps
 | 8 | **fail2ban `[manual]` jail** in `/etc/fail2ban/jail.d/proxybox.local` with `backend=systemd`, plus an `sshd` backend override so minimal images without `/var/log/auth.log` do not fail. |
 | 9 | **Four systemd units** — `proxybox-admin`, `proxybox-traffic-worker`, `proxybox-bot` (disabled by default). |
 | 10 | `systemctl enable --now` for core services. |
-| 11 | **Auto-creates the first device** (`phone-1` by default; override with `PROXYBOX_FIRST_DEVICE`) by logging in with the generated username/password and using that session cookie. |
+| 11 | **Auto-creates the first device** (`device-1` by default; override with `PROXYBOX_FIRST_DEVICE`; set it empty to skip) by logging in with the generated username/password and using that session cookie. |
 | 12 | **Self-contained handoff** — login URL, username, password, 5 subscription URLs in a single coloured block. |
 
 > [!IMPORTANT]
@@ -76,16 +79,24 @@ sudo bash deploy/check-prereqs.sh --install  # also apt-install missing apt deps
 
 ---
 
-## Idempotency
+## Fresh vs Reuse
 
-Every step is gated by `[ ! -f ... ]` or `if ! command -v ...`. Re-running on an installed system does nothing destructive:
+Use `--fresh` for first installs on templates, rebuilt VPSes, or any host that might contain previous ProxyBox state. It removes:
+
+- `/etc/proxybox`, `/var/lib/proxybox`, `/var/log/proxybox`, `/var/www/proxybox-sub`
+- ProxyBox's `sing-box` config/cert/key under `/etc/sing-box`
+- ProxyBox-managed systemd unit files
+- ProxyBox fail2ban drop-ins and the old marked `[manual]` block in `/etc/fail2ban/jail.local`
+- the managed ProxyBox Caddyfile if HTTPS was enabled from the panel
+
+Without `--fresh`, re-running on an installed system keeps state:
 
 - existing config files are kept verbatim
-- existing systemd units are not overwritten
+- managed systemd units are rewritten to the current shipped version
 - `pip install` is idempotent (same wheels)
 - the bootstrap "create first device" step skips if any device row already exists
 
-Safe to re-run after a partial failure — pick up where the previous run left off.
+Use reuse mode for upgrades or partial-failure recovery when you want to keep devices, traffic history, subscription URLs, and credentials.
 
 ---
 

@@ -58,7 +58,7 @@ Then ask in any session:
 
 > deploy proxybox on my VPS at 1.2.3.4 using ~/.ssh/id_ed25519
 
-The agent walks auto-deleted temporary SSH `known_hosts` → minimal VPS check → `git clone` / update → full pre-flight with Python 3.11 provisioning → `install.sh` → verification → relays the credentials back. For Codex or other agents, point them at [`deploy/claude-skill/SKILL.md`](../deploy/claude-skill/SKILL.md) directly.
+The agent walks auto-deleted temporary SSH `known_hosts` → minimal VPS check → `git clone` / update → full pre-flight with Python 3.11 provisioning → `install.sh --fresh` → verification → relays the credentials back. For Codex or other agents, point them at [`deploy/claude-skill/SKILL.md`](../deploy/claude-skill/SKILL.md) directly.
 
 #### Path B — `install.sh`
 
@@ -67,10 +67,10 @@ ssh root@<your-vps>
 apt-get update && apt-get install -y git curl ca-certificates
 git clone https://github.com/carlos0xx/proxybox /opt/proxybox
 cd /opt/proxybox
-bash deploy/install.sh --lang en       # or --lang zh
+bash deploy/install.sh --fresh --lang en       # or --lang zh
 ```
 
-Idempotent — safe to re-run if it bails mid-way. End-to-end ~3 minutes. Prints a self-contained handoff: **login URL · username · password · 5 subscription URLs**.
+Fresh mode clears old ProxyBox-managed state before generating new credentials. End-to-end ~3 minutes. Prints a self-contained handoff: **login URL · username · password · 5 subscription URLs**.
 
 > [!IMPORTANT]
 > Copy the credentials into a password manager **before closing the terminal**. Recovery via SSH: `cat /etc/proxybox/admin.password` (mode 0400) for the password; the rest is in `/etc/proxybox/config.yaml`.
@@ -84,7 +84,7 @@ docker compose exec proxybox-admin \
     sh -c 'cat /etc/proxybox/admin.password; grep -E "username|login_path" /etc/proxybox/config.yaml'
 ```
 
-Bootstrap container generates the config on first start. No fail2ban, no HTTPS UI on this path — pair with Caddy + a host firewall for production.
+Bootstrap container generates the config on first start. For reused named volumes, stop the stack first, then run `PROXYBOX_FRESH=1 docker compose up -d` to clear old ProxyBox state. No fail2ban, no HTTPS UI on this path — pair with Caddy + a host firewall for production.
 
 ---
 
@@ -101,7 +101,7 @@ http://<your-vps>:8080/login/<random-12-char-suffix>
 
 Enter `admin` + the printed password. A 30-day session cookie is set; you land in the SPA.
 
-The auto-created **`phone-1`** device is already in the **Devices** page. The five subscription URLs are in **Endpoints**:
+The auto-created **`device-1`** device is already in the **Devices** page. The five subscription URLs are in **Endpoints**:
 
 | Format | Best for |
 | --- | --- |
@@ -124,7 +124,7 @@ All from the panel — no SSH needed for anything below.
 
 | Task | Where | Notes |
 | --- | --- | --- |
-| **Add a device** | Devices → New | Use generic names (`phone-1`, `tablet-1`, `home-router`). Avoid personal names — they bleed into sing-box config and sub files. |
+| **Add a device** | Devices → New | Use generic names (`device-1`, `tablet-1`, `home-router`). Avoid personal names — they bleed into sing-box config and sub files. |
 | **Rotate a leaked URL** | Devices → 🔄 New URL | `sub_token` rotates; UUID + ports unchanged. Client re-imports once. |
 | **Pause a device** | Devices → ⏸ Pause | Indefinite or until a timestamp. Inbound removed; traffic history preserved. |
 | **Change password / username** | Security → Login → Edit | Requires the current password (defends against session-hijack re-auth). |
@@ -207,7 +207,7 @@ cp -r deploy/claude-skill/* ~/.claude/skills/proxybox-deploy/
 
 > 帮我在 1.2.3.4 这台 VPS 上部署 proxybox,SSH key 是 ~/.ssh/id_ed25519
 
-代理走自动删除的临时 SSH `known_hosts` → 最小 VPS 检查 → `git clone` / 更新 → 带 Python 3.11 安装的完整 pre-flight → `install.sh` → 验证服务 → 把凭据发给你。Codex 或其他代理:直接把 [`deploy/claude-skill/SKILL.md`](../deploy/claude-skill/SKILL.md) 喂给它即可。
+代理走自动删除的临时 SSH `known_hosts` → 最小 VPS 检查 → `git clone` / 更新 → 带 Python 3.11 安装的完整 pre-flight → `install.sh --fresh` → 验证服务 → 把凭据发给你。Codex 或其他代理:直接把 [`deploy/claude-skill/SKILL.md`](../deploy/claude-skill/SKILL.md) 喂给它即可。
 
 #### 方式 B — `install.sh`
 
@@ -216,10 +216,10 @@ ssh root@<你的-vps>
 apt-get update && apt-get install -y git curl ca-certificates
 git clone https://github.com/carlos0xx/proxybox /opt/proxybox
 cd /opt/proxybox
-bash deploy/install.sh --lang zh       # 或 --lang en
+bash deploy/install.sh --fresh --lang zh       # 或 --lang en
 ```
 
-幂等 —— 中途断了重跑没事。端到端 ~3 分钟。打印自包含的凭据 + 订阅 URL:**登录地址 · 用户名 · 密码 · 5 个订阅 URL**。
+fresh 模式会先清掉 ProxyBox 管理的旧状态,再生成新凭据。端到端 ~3 分钟。打印自包含的凭据 + 订阅 URL:**登录地址 · 用户名 · 密码 · 5 个订阅 URL**。
 
 > [!IMPORTANT]
 > **关闭终端前**先把凭据抄到密码管理器。SSH 找回:密码在 `/etc/proxybox/admin.password` (0400),其余 (用户名 / login_path / token) 在 `/etc/proxybox/config.yaml`。
@@ -233,7 +233,7 @@ docker compose exec proxybox-admin \
     sh -c 'cat /etc/proxybox/admin.password; grep -E "username|login_path" /etc/proxybox/config.yaml'
 ```
 
-`bootstrap` 容器首次启动时生成 config。这个路径不带 fail2ban 和 HTTPS UI —— 生产环境请配 Caddy + 主机防火墙。
+`bootstrap` 容器首次启动时生成 config。复用过的 named volume 先停掉 stack,再用 `PROXYBOX_FRESH=1 docker compose up -d` 清掉旧 ProxyBox 状态。这个路径不带 fail2ban 和 HTTPS UI —— 生产环境请配 Caddy + 主机防火墙。
 
 ---
 
@@ -250,7 +250,7 @@ http://<你的-VPS>:8080/login/<12 位随机串>
 
 输 `admin` + 打印的密码。30 天 session cookie 设上,进 SPA。
 
-自动建好的 **`phone-1`** 设备已经在 **设备管理** 里。**订阅链接** 页有 5 种格式:
+自动建好的 **`device-1`** 设备已经在 **设备管理** 里。**订阅链接** 页有 5 种格式:
 
 | 格式 | 适合 |
 | --- | --- |
@@ -270,7 +270,7 @@ http://<你的-VPS>:8080/login/<12 位随机串>
 
 | 任务 | 在哪 | 说明 |
 | --- | --- | --- |
-| **加新设备** | 设备管理 → 生成 | 用泛化命名 (`phone-1`、`tablet-1`、`home-router`)。**不要用个人名字** —— 设备名会进 sing-box 配置和订阅文件,算指纹面。 |
+| **加新设备** | 设备管理 → 生成 | 用泛化命名 (`device-1`、`tablet-1`、`home-router`)。**不要用个人名字** —— 设备名会进 sing-box 配置和订阅文件,算指纹面。 |
 | **轮换泄漏的 URL** | 设备管理 → 🔄 换 URL | `sub_token` 变了;UUID + 端口不变。客户端重新导入一次。 |
 | **暂停设备** | 设备管理 → ⏸ 暂停 | 选无限期或定时间。inbound 移除,历史流量保留。 |
 | **改密码 / 用户名** | 安全 → 登录设置 → 修改 | 改密码需先输当前密码 (防 session 被劫后立刻被改密)。 |

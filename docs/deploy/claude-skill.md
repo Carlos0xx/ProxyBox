@@ -1,6 +1,6 @@
 # Claude Code skill
 
-> A bundled Claude Code skill that drives the full install over SSH — minimal VPS check, `git clone` / update, full pre-flight, `install.sh`, verification, credential handoff.
+> A bundled Claude Code skill that drives the full install over SSH — minimal VPS check, `git clone` / update, full pre-flight, `install.sh --fresh`, verification, credential handoff.
 
 For the high-level walkthrough, see [Getting started · Path 3](../getting-started.md#path-3--claude-code).
 
@@ -33,7 +33,7 @@ Claude will:
 | 4 | Install bootstrap tools (`git`, `curl`, `ca-certificates`) if missing. |
 | 5 | `git clone https://github.com/carlos0xx/proxybox /opt/proxybox`, or update an existing checkout from `origin/main` with `git pull --ff-only origin main`. |
 | 6 | Run `deploy/check-prereqs.sh --install` over SSH, including Python 3.11 provisioning — abort if it fails. |
-| 7 | Run `bash deploy/install.sh --lang en` (or `--lang zh` if you asked in Chinese). |
+| 7 | Run `bash deploy/install.sh --fresh --lang en` (or `--lang zh` if you asked in Chinese). |
 | 8 | Verify the four core services are `active`. |
 | 9 | Relay the login URL, username, password, and 5 subscription URLs back to you. |
 

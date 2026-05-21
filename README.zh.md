@@ -45,7 +45,7 @@ mkdir -p ~/.claude/skills/proxybox-deploy
 cp -r deploy/claude-skill/* ~/.claude/skills/proxybox-deploy/
 ```
 
-然后在对话里:*"帮我在 1.2.3.4 这台 VPS 上部署 proxybox,SSH key 是 ~/.ssh/id_ed25519"*。代理走自动删除的临时 SSH `known_hosts` → 最小 VPS 检查 → `git clone` / 更新 → 带 Python 3.11 安装的完整 pre-flight → `install.sh` → 验证服务 → 把登录地址 + 凭据发给你。
+然后在对话里:*"帮我在 1.2.3.4 这台 VPS 上部署 proxybox,SSH key 是 ~/.ssh/id_ed25519"*。代理走自动删除的临时 SSH `known_hosts` → 最小 VPS 检查 → `git clone` / 更新 → 带 Python 3.11 安装的完整 pre-flight → `install.sh --fresh` → 验证服务 → 把登录地址 + 凭据发给你。
 
 Codex 或其他代理:直接把 [`deploy/claude-skill/SKILL.md`](./deploy/claude-skill/SKILL.md) 喂给它 —— 指令是通用的,不绑 Claude Code。
 
@@ -55,10 +55,10 @@ Codex 或其他代理:直接把 [`deploy/claude-skill/SKILL.md`](./deploy/claude
 ssh root@<你的-vps>
 apt-get update && apt-get install -y git curl ca-certificates
 git clone https://github.com/carlos0xx/proxybox /opt/proxybox
-cd /opt/proxybox && bash deploy/install.sh --lang zh
+cd /opt/proxybox && bash deploy/install.sh --fresh --lang zh
 ```
 
-幂等。自动生成 Reality 密钥对、Hy2 证书、16 位随机 admin 密码,自动建第一台设备,最后打印自包含的**登录地址 · 用户名 · 密码 · 5 个订阅 URL**。
+fresh 模式会先清理 ProxyBox 自己管理的旧配置、旧数据、旧订阅和旧服务文件,再生成新的 Reality 密钥对、Hy2 证书、16 位随机 admin 密码和泛化默认设备。只有明确要保留旧 ProxyBox 安装时才去掉 `--fresh`。
 
 ### 方式 C · Docker Compose
 
@@ -68,6 +68,8 @@ docker compose up -d
 ```
 
 多架构镜像在 `ghcr.io/carlos0xx/proxybox:latest`。这个路径不带 fail2ban 和 HTTPS UI —— 生产环境请配 Caddy + 主机防火墙。
+
+复用过的 Docker volume 想无痕重装时,先停掉 stack,再用 `PROXYBOX_FRESH=1 docker compose up -d` 清掉旧 ProxyBox 状态。
 
 > [!IMPORTANT]
 > 安装器**只打印一次**登录地址 + 密码。关闭终端前抄进密码管理器。SSH 找回:`cat /etc/proxybox/admin.password` (0400) 拿密码,其余在 `/etc/proxybox/config.yaml`。

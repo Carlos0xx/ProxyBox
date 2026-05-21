@@ -4,22 +4,27 @@
 # Usage:
 #   git clone https://github.com/carlos0xx/proxybox /opt/proxybox
 #   cd /opt/proxybox && bash deploy/install.sh                       # auto language
+#   cd /opt/proxybox && bash deploy/install.sh --fresh               # wipe old ProxyBox state first
 #   cd /opt/proxybox && bash deploy/install.sh --lang en             # force English
 #   cd /opt/proxybox && bash deploy/install.sh --lang zh             # force Chinese
 #
 # Idempotent: re-running it on an existing install does nothing destructive,
 # only fills in missing pieces. Safe to run repeatedly.
+# Fresh mode: --fresh or PROXYBOX_FRESH=1 removes ProxyBox-managed state first.
 
 set -euo pipefail
 ORIG_ARGS=("$@")
 
 # ─── argv: --lang en|zh + pass-through to check-prereqs.sh ────────
 LANG_CHOICE="${PROXYBOX_LANG:-auto}"
+FRESH_MODE="${PROXYBOX_FRESH:-0}"
 while [ $# -gt 0 ]; do
     case "$1" in
         --lang)        LANG_CHOICE="${2:-auto}"; shift 2 ;;
         --lang=*)      LANG_CHOICE="${1#*=}"; shift ;;
-        -h|--help)     sed -n '2,11p' "$0"; exit 0 ;;
+        --fresh)       FRESH_MODE=1; shift ;;
+        --reuse|--no-fresh) FRESH_MODE=0; shift ;;
+        -h|--help)     sed -n '2,13p' "$0"; exit 0 ;;
         *)             echo "unknown arg: $1" >&2; exit 2 ;;
     esac
 done
@@ -35,6 +40,10 @@ case "$LANG_CHOICE" in
     en|zh) ;;
     *) echo "unsupported --lang: $LANG_CHOICE (use 'en' or 'zh')" >&2; exit 2 ;;
 esac
+case "$FRESH_MODE" in
+    1|true|TRUE|yes|YES|on|ON) FRESH_MODE=1 ;;
+    *)                         FRESH_MODE=0 ;;
+esac
 
 # ─── i18n strings ────────────────────────────────────────────────
 if [ "$LANG_CHOICE" = "zh" ]; then
@@ -47,6 +56,11 @@ if [ "$LANG_CHOICE" = "zh" ]; then
     M_INSTALLER="==> ProxyBox 安装器"
     M_INSTALLER_SRC="    源码:   %s"
     M_INSTALLER_CFG="    配置:   %s"
+    M_INSTALLER_MODE="    模式:   %s"
+    M_MODE_FRESH="fresh (清理旧 ProxyBox 状态)"
+    M_MODE_REUSE="reuse (保留已有状态)"
+    M_FRESH_CLEAN="==> fresh 模式: 清理旧 ProxyBox 配置、数据、订阅、unit 和 HTTPS 配置..."
+    M_FRESH_DONE="    fresh 清理完成, 将重新生成全新身份"
     M_APT_INSTALLING="==> 安装系统包..."
     M_PY311_INSTALLING="==> 安装并验证 Python 3.11..."
     M_PY311_FAIL="错误: 未能安装可用的 Python 3.11"
@@ -58,6 +72,7 @@ if [ "$LANG_CHOICE" = "zh" ]; then
     M_GEN_CONFIG="==> 生成 ProxyBox config.yaml..."
     M_START_SERVICES="==> 启动服务..."
     M_BOOTSTRAP_DEVICE="==> 创建首台默认设备 (%s)..."
+    M_BOOTSTRAP_SKIP="    已跳过首台默认设备创建 (PROXYBOX_FIRST_DEVICE 为空)"
     M_BOOTSTRAP_OK="    设备已创建: sub_token=%s"
     M_BOOTSTRAP_FAIL="    [警告] 首台设备自动创建失败, 请稍后手动到 admin 面板新建"
     M_DONE_HEADER="ProxyBox 安装完成"
@@ -96,6 +111,11 @@ else
     M_INSTALLER="==> ProxyBox installer"
     M_INSTALLER_SRC="    source:     %s"
     M_INSTALLER_CFG="    config:     %s"
+    M_INSTALLER_MODE="    mode:       %s"
+    M_MODE_FRESH="fresh (wipe old ProxyBox state)"
+    M_MODE_REUSE="reuse (keep existing state)"
+    M_FRESH_CLEAN="==> fresh mode: clearing old ProxyBox config, data, subscriptions, units, and HTTPS config..."
+    M_FRESH_DONE="    fresh cleanup complete; generating a new identity"
     M_APT_INSTALLING="==> installing system packages..."
     M_PY311_INSTALLING="==> installing and verifying Python 3.11..."
     M_PY311_FAIL="ERROR: could not install a working Python 3.11"
@@ -107,6 +127,7 @@ else
     M_GEN_CONFIG="==> generating ProxyBox config..."
     M_START_SERVICES="==> starting services..."
     M_BOOTSTRAP_DEVICE="==> auto-creating first device (%s)..."
+    M_BOOTSTRAP_SKIP="    skipped first-device auto-create (PROXYBOX_FIRST_DEVICE is empty)"
     M_BOOTSTRAP_OK="    device created: sub_token=%s"
     M_BOOTSTRAP_FAIL="    [warn] first-device auto-create failed, create one manually from admin UI later"
     M_DONE_HEADER="ProxyBox installed"
@@ -172,7 +193,7 @@ HR="━━━━━━━━━━━━━━━━━━━━━━━━━�
 if [ "$(id -u)" != "0" ]; then
     if command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
         echo "$M_ESCALATE"
-        exec sudo env \
+        sudo_env=(
             PROXYBOX_LANG="$LANG_CHOICE" \
             PROXYBOX_DIR="$PROXYBOX_DIR" \
             CONFIG_DIR="$CONFIG_DIR" \
@@ -180,7 +201,12 @@ if [ "$(id -u)" != "0" ]; then
             LOG_DIR="$LOG_DIR" \
             SUB_DIR="$SUB_DIR" \
             SINGBOX_DIR="$SINGBOX_DIR" \
-            bash "$0" "${ORIG_ARGS[@]}"
+            PYTHON_BIN="$PYTHON_BIN"
+        )
+        [ "${PROXYBOX_FRESH+x}" = x ] && sudo_env+=(PROXYBOX_FRESH="$PROXYBOX_FRESH")
+        [ "${PROXYBOX_FIRST_DEVICE+x}" = x ] && sudo_env+=(PROXYBOX_FIRST_DEVICE="$PROXYBOX_FIRST_DEVICE")
+        [ "${PROXYBOX_LOCAL_USERNAME+x}" = x ] && sudo_env+=(PROXYBOX_LOCAL_USERNAME="$PROXYBOX_LOCAL_USERNAME")
+        exec sudo env "${sudo_env[@]}" bash "$0" "${ORIG_ARGS[@]}"
     fi
     echo "$M_NEED_ROOT" >&2
     exit 1
@@ -191,6 +217,61 @@ if [ ! -f "$PROXYBOX_DIR/pyproject.toml" ]; then
     printf "$M_NOT_PROXYBOX_DIR\n" "$PROXYBOX_DIR" >&2
     printf "$M_EXPECT_PYPROJECT\n" >&2
     exit 1
+fi
+
+cleanup_legacy_fail2ban_jail_local() {
+    local jail="/etc/fail2ban/jail.local"
+    [ -f "$jail" ] || return 0
+    grep -q '^# ProxyBox manual ban jail' "$jail" 2>/dev/null || return 0
+
+    local tmp
+    tmp=$(mktemp "${TMPDIR:-/tmp}/proxybox-jail-local.XXXXXX")
+    awk '
+        /^# ProxyBox manual ban jail/ { skip = 1; next }
+        skip && /^\[/ && $0 != "[manual]" { skip = 0; print; next }
+        skip { next }
+        { print }
+    ' "$jail" > "$tmp"
+    if ! cmp -s "$tmp" "$jail"; then
+        install -m 644 "$tmp" "$jail"
+    fi
+    rm -f "$tmp"
+    if ! grep -q '[^[:space:]]' "$jail" 2>/dev/null; then
+        rm -f "$jail"
+    fi
+}
+
+fresh_cleanup() {
+    echo "$M_FRESH_CLEAN"
+
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl stop proxybox-bot proxybox-traffic-worker proxybox-admin sing-box >/dev/null 2>&1 || true
+        if [ -f /etc/caddy/Caddyfile ] && grep -q '^# ProxyBox HTTPS' /etc/caddy/Caddyfile 2>/dev/null; then
+            systemctl stop caddy >/dev/null 2>&1 || true
+            systemctl disable caddy >/dev/null 2>&1 || true
+            rm -f /etc/caddy/Caddyfile
+        fi
+    fi
+
+    rm -f \
+        /etc/systemd/system/proxybox-admin.service \
+        /etc/systemd/system/proxybox-traffic-worker.service \
+        /etc/systemd/system/proxybox-bot.service \
+        /etc/systemd/system/sing-box.service
+    systemctl daemon-reload >/dev/null 2>&1 || true
+
+    rm -rf "$CONFIG_DIR" "$DATA_DIR" "$LOG_DIR" "$SUB_DIR"
+    rm -f "$SINGBOX_DIR/config.json" "$SINGBOX_DIR/key.pem" "$SINGBOX_DIR/cert.pem"
+    rmdir "$SINGBOX_DIR" 2>/dev/null || true
+
+    rm -f /etc/fail2ban/jail.d/proxybox.local /etc/fail2ban/jail.d/proxybox-manual.conf
+    cleanup_legacy_fail2ban_jail_local
+
+    echo "$M_FRESH_DONE"
+}
+
+if [ "$FRESH_MODE" = "1" ]; then
+    fresh_cleanup
 fi
 
 # ─── pre-flight: defer to check-prereqs.sh ─────────────────────────
@@ -207,6 +288,11 @@ echo ""
 echo "$M_INSTALLER"
 printf "$M_INSTALLER_SRC\n" "$PROXYBOX_DIR"
 printf "$M_INSTALLER_CFG\n" "$CONFIG_DIR"
+if [ "$FRESH_MODE" = "1" ]; then
+    printf "$M_INSTALLER_MODE\n" "$M_MODE_FRESH"
+else
+    printf "$M_INSTALLER_MODE\n" "$M_MODE_REUSE"
+fi
 
 ensure_python311_repo() {
     if apt-cache policy python3.11 2>/dev/null | awk 'BEGIN { ok = 1 } /Candidate:/ { ok = ($2 == "(none)") ? 1 : 0 } END { exit ok }'; then
@@ -266,8 +352,7 @@ fi
 printf "$M_SINGBOX_VERSION\n" "$(sing-box version | head -1)"
 
 # ─── 4. sing-box systemd unit ──────────────────────────────────────
-if [ ! -f /etc/systemd/system/sing-box.service ]; then
-    cat > /etc/systemd/system/sing-box.service <<'UNIT'
+install -m 644 /dev/stdin /etc/systemd/system/sing-box.service <<'UNIT'
 [Unit]
 Description=sing-box service
 Documentation=https://sing-box.app
@@ -285,8 +370,6 @@ LimitNOFILE=1048576
 [Install]
 WantedBy=multi-user.target
 UNIT
-    systemctl daemon-reload
-fi
 
 # ─── 5. sing-box config (only generate if missing) ────────────────
 if [ ! -f "$SINGBOX_DIR/config.json" ]; then
@@ -427,6 +510,7 @@ YAML
 fi
 
 # ─── 8. fail2ban [manual] jail ─────────────────────────────────────
+cleanup_legacy_fail2ban_jail_local
 mkdir -p /etc/fail2ban/jail.d
 install -m 644 /dev/stdin /etc/fail2ban/jail.d/proxybox.local <<'JAIL'
 # ProxyBox managed fail2ban config.
@@ -451,8 +535,7 @@ maxretry = 99999
 JAIL
 
 # ─── 9. ProxyBox admin systemd unit ────────────────────────────────
-if [ ! -f /etc/systemd/system/proxybox-admin.service ]; then
-    cat > /etc/systemd/system/proxybox-admin.service <<UNIT
+install -m 644 /dev/stdin /etc/systemd/system/proxybox-admin.service <<UNIT
 [Unit]
 Description=ProxyBox admin HTTP API
 After=network.target sing-box.service
@@ -470,25 +553,23 @@ NoNewPrivileges=yes
 [Install]
 WantedBy=multi-user.target
 UNIT
-    systemctl daemon-reload
-fi
 
 # ─── 10. other systemd units (worker + bot) ────────────────────────
 for unit in proxybox-traffic-worker.service proxybox-bot.service; do
     src="$PROXYBOX_DIR/deploy/systemd/$unit"
     dst="/etc/systemd/system/$unit"
-    if [ -f "$src" ] && [ ! -f "$dst" ]; then
-        cp "$src" "$dst"
-        systemctl daemon-reload
+    if [ -f "$src" ]; then
+        install -m 644 "$src" "$dst"
     fi
 done
+systemctl daemon-reload
 
 # ─── 11. enable + start core services ──────────────────────────────
 echo "$M_START_SERVICES"
-systemctl enable --now fail2ban  >/dev/null 2>&1 || true
-systemctl enable --now sing-box  >/dev/null 2>&1 || true
-systemctl enable --now proxybox-admin >/dev/null 2>&1 || true
-systemctl enable --now proxybox-traffic-worker >/dev/null 2>&1 || true
+for svc in fail2ban sing-box proxybox-admin proxybox-traffic-worker; do
+    systemctl enable "$svc" >/dev/null 2>&1 || true
+    systemctl restart "$svc" >/dev/null 2>&1 || true
+done
 sleep 3
 
 # ─── 12. read token + host ─────────────────────────────────────────
@@ -509,7 +590,34 @@ fi
 # ─── 13. auto-create first device (one-shot UX) ────────────────────
 # Wait for proxybox-admin to be reachable on localhost (sleep 3 above
 # is usually enough on a real VPS, but be defensive on slow hosts).
-DEFAULT_DEVICE_NAME="${PROXYBOX_FIRST_DEVICE:-phone-1}"
+resolve_first_device_name() {
+    local raw="${PROXYBOX_FIRST_DEVICE-device-1}"
+    case "$raw" in
+        local-user|@local-user|auto-user)
+            raw="${PROXYBOX_LOCAL_USERNAME:-${SUDO_USER:-${USER:-${LOGNAME:-}}}}"
+            ;;
+    esac
+
+    PROXYBOX_RAW_DEVICE="$raw" .venv/bin/python -c "
+import os, re
+raw = os.environ.get('PROXYBOX_RAW_DEVICE', '').strip()
+if not raw:
+    print('')
+    raise SystemExit
+name = re.sub(r'[^A-Za-z0-9_-]+', '-', raw).strip('-_')
+if not name:
+    print('')
+    raise SystemExit
+if len(name) < 3:
+    name = f'device-{name}'
+name = name[:32].strip('-_')
+if len(name) < 3:
+    name = 'device-1'
+print(name)
+"
+}
+
+DEFAULT_DEVICE_NAME=$(resolve_first_device_name)
 SUB_TOKEN=""
 for _ in 1 2 3 4 5 6 7 8 9 10; do
     if curl -s -o /dev/null -w "%{http_code}" "$ADMIN_LOCAL$LOGIN_PATH" 2>/dev/null | grep -q '^200$'; then
@@ -574,6 +682,8 @@ except Exception:
 if [ -n "$EXISTING" ]; then
     DEFAULT_DEVICE_NAME=$(echo "$EXISTING" | cut -f1)
     SUB_TOKEN=$(echo "$EXISTING" | cut -f2)
+elif [ -z "$DEFAULT_DEVICE_NAME" ]; then
+    echo "$M_BOOTSTRAP_SKIP"
 else
     printf "$M_BOOTSTRAP_DEVICE\n" "$DEFAULT_DEVICE_NAME"
     CREATE_BODY=$(DEFAULT_DEVICE_NAME="$DEFAULT_DEVICE_NAME" .venv/bin/python -c "

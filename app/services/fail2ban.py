@@ -1,8 +1,9 @@
 """Wrapper around fail2ban-client for manual IP bans.
 
-The ProxyBox jail (``[manual]`` in /etc/fail2ban/jail.local) is configured
-with maxretry=99999 so fail2ban itself never auto-bans — every ban is
-explicit via the admin endpoints. install.sh creates the jail.
+The ProxyBox jail (``[manual]`` in
+``/etc/fail2ban/jail.d/proxybox.local``) is configured with maxretry=99999
+so fail2ban itself never auto-bans — every ban is explicit via the admin
+endpoints. install.sh creates the jail.
 """
 
 from __future__ import annotations

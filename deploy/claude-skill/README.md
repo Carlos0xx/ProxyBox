@@ -6,7 +6,7 @@ Trigger in any Claude Code session:
 
 > deploy proxybox on my VPS at 1.2.3.4 using ~/.ssh/id_ed25519
 
-Claude then checks the VPS, clones or updates the repo, runs the full pre-flight, executes `install.sh`, verifies the services, and hands back the login URL + credentials.
+Claude then checks the VPS, clones or updates the repo, runs the full pre-flight, executes `install.sh --fresh`, verifies the services, and hands back the login URL + credentials.
 
 ---
 
@@ -31,7 +31,7 @@ The next Claude Code session sees the skill. Confirm with `claude /skills` or ju
 | 4 | Installs bootstrap tools (`git`, `curl`, `ca-certificates`) if missing. |
 | 5 | `git clone https://github.com/carlos0xx/proxybox /opt/proxybox`, or updates an existing checkout from `origin/main` with `git pull --ff-only origin main`. |
 | 6 | Runs `deploy/check-prereqs.sh --install` over SSH, including Python 3.11 provisioning — aborts on a blocking failure. |
-| 7 | Runs `bash deploy/install.sh --lang <auto-detected>`. |
+| 7 | Runs `bash deploy/install.sh --fresh --lang <auto-detected>` for fresh/template installs. |
 | 8 | Verifies `sing-box`, `proxybox-admin`, `proxybox-traffic-worker`, and `fail2ban` are `active`. |
 | 9 | Relays the **login URL + full password + 5 subscription URLs** back to the user. |
 | 10 | *(optional)* Writes `/etc/proxybox/bot.env` + enables `proxybox-bot` if Telegram details were supplied. |
