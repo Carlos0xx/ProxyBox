@@ -5,6 +5,24 @@ and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Security — Codex audit follow-up #6
+
+- **Sensitive runtime rewrites keep private permissions.** `sing-box` config,
+  Caddy HTTPS config patches, install lock-down rewrites, and generated SQLite
+  DB files now preserve owner-only permissions instead of inheriting a wider
+  process umask.
+- **Passkey login and revoke contracts fixed.** The login page now exposes the
+  WebAuthn login flow when Passkey is enabled, and passkey management returns
+  the full credential id the SPA needs to revoke a lost device.
+- **Device deletion now clears retained per-device history.** Deleting a
+  device removes its traffic and host history rows in addition to the device
+  row and subscription file.
+- **Production API docs disabled by default.** FastAPI `/docs`, `/redoc`, and
+  `/openapi.json` are no longer mounted in the production app.
+- **Telegram bot keeps token-only access local.** Optional bot mode can use the
+  admin URL token from loopback without re-opening token-only auth to the
+  public admin API.
+
 ### Security — Codex audit follow-up #5
 
 - **Admin-token rotation keeps `config.yaml` private.** The atomic rewrite now

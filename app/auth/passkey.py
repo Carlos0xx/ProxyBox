@@ -18,12 +18,15 @@ and ``passkey.origin`` (full https:// URL) in config.
 from __future__ import annotations
 
 import base64
+import contextlib
 import json
+import os
 import secrets
 import time
 from pathlib import Path as P
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Path, Request, Response
 from itsdangerous import BadData, URLSafeTimedSerializer
 from pydantic import BaseModel
 
@@ -46,8 +49,17 @@ def _load_or_create_secret() -> str:
         return path.read_text().strip()
     path.parent.mkdir(parents=True, exist_ok=True)
     s = secrets.token_urlsafe(48)
-    path.write_text(s)
-    path.chmod(0o600)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(s)
+        os.replace(tmp, path)
+        path.chmod(0o600)
+    except BaseException:
+        with contextlib.suppress(FileNotFoundError):
+            tmp.unlink()
+        raise
     return s
 
 
@@ -137,9 +149,16 @@ class _RegisterCompleteReq(BaseModel):
 class _LoginCompleteReq(BaseModel):
     handle: str
     assertion: dict
+    next_path: str = ""
 
 
 # ─── Router factory (late-imports webauthn) ─────────────────────
+
+
+def _post_login_destination(next_path: str) -> str:
+    if next_path.startswith("/") and not next_path.startswith("//"):
+        return next_path
+    return f"/admin/{get_settings().admin.token}/"
 
 
 def make_public_router() -> APIRouter:
@@ -218,7 +237,7 @@ def make_public_router() -> APIRouter:
             samesite="lax",
             path="/",
         )
-        return {"ok": True}
+        return {"ok": True, "redirect": _post_login_destination(req.next_path)}
 
     @router.post("/logout")
     async def logout(response: Response) -> dict:
@@ -320,6 +339,8 @@ def make_admin_router() -> APIRouter:
         return {
             "passkeys": [
                 {
+                    "id_full": r["credential_id"],
+                    "id_short": r["credential_id"][:12] + "...",
                     "id_prefix": r["credential_id"][:12] + "...",
                     "label": r["label"],
                     "created_at": r["created_at"],
@@ -330,7 +351,7 @@ def make_admin_router() -> APIRouter:
         }
 
     @router.delete("/passkeys/{cid}")
-    async def revoke_passkey(cid: str) -> dict:
+    async def revoke_passkey(cid: Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{8,256}$")]) -> dict:
         with connection() as conn:
             cur = conn.execute("DELETE FROM passkey_credential WHERE credential_id = ?", (cid,))
             conn.commit()

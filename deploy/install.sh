@@ -190,6 +190,7 @@ apt-get -y install \
 
 # ─── 2. directories ────────────────────────────────────────────────
 mkdir -p "$CONFIG_DIR" "$DATA_DIR" "$LOG_DIR" "$SUB_DIR" "$SINGBOX_DIR"
+chmod 700 "$CONFIG_DIR" "$DATA_DIR"
 
 # ─── 3. sing-box binary ────────────────────────────────────────────
 if ! command -v sing-box >/dev/null; then
@@ -249,7 +250,7 @@ if [ ! -f "$SINGBOX_DIR/config.json" ]; then
         -subj "/CN=$SNI" 2>/dev/null
     chmod 600 "$SINGBOX_DIR/key.pem"
 
-    cat > "$SINGBOX_DIR/config.json" <<JSON
+    install -m 600 /dev/stdin "$SINGBOX_DIR/config.json" <<JSON
 {
   "log": { "level": "info", "timestamp": true },
   "experimental": {
@@ -321,11 +322,9 @@ if [ ! -f "$CONFIG_DIR/config.yaml" ]; then
     # Password lives in /etc/proxybox/admin.password (mode 0400), NOT in
     # config.yaml. Keeps cat config.yaml screenshot-safe and backup-safe
     # while still being one ``cat`` away for password recovery.
-    umask 077
-    printf '%s' "$ADMIN_PASSWORD" > "$CONFIG_DIR/admin.password"
+    printf '%s' "$ADMIN_PASSWORD" | install -m 400 /dev/stdin "$CONFIG_DIR/admin.password"
     chmod 0400 "$CONFIG_DIR/admin.password"
-    umask 022
-    cat > "$CONFIG_DIR/config.yaml" <<YAML
+    install -m 600 /dev/stdin "$CONFIG_DIR/config.yaml" <<YAML
 admin:
   token: "$ADMIN_TOKEN"
   username: "admin"
@@ -486,11 +485,16 @@ fi
 # so /admin/{token}/ now requires a /login session cookie. Restart so the
 # @lru_cache'd settings reload. ~3s, harmless.
 .venv/bin/python -c "
-import yaml, pathlib
+import os, yaml, pathlib
 p = pathlib.Path('$CONFIG_DIR/config.yaml')
 cfg = yaml.safe_load(p.read_text())
 cfg.setdefault('features', {})['url_token_bypass'] = False
-p.write_text(yaml.safe_dump(cfg, sort_keys=False, allow_unicode=True))
+tmp = p.with_suffix(p.suffix + '.tmp')
+fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+with os.fdopen(fd, 'w') as f:
+    f.write(yaml.safe_dump(cfg, sort_keys=False, allow_unicode=True))
+os.replace(tmp, p)
+p.chmod(0o600)
 "
 systemctl restart proxybox-admin >/dev/null 2>&1 || true
 

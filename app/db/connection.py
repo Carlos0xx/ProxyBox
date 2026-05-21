@@ -12,8 +12,9 @@ from app.config import get_settings
 
 def _connect() -> sqlite3.Connection:
     db_path = Path(get_settings().paths.traffic_db)
-    db_path.parent.mkdir(parents=True, exist_ok=True)
+    db_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     conn = sqlite3.connect(db_path, check_same_thread=False)
+    db_path.chmod(0o600)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn

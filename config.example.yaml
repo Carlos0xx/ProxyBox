@@ -81,5 +81,6 @@ features:
   passkey: false
 
   # Telegram bot module (proxybox-bot.service). Set bot token via TG_BOT_TOKEN
-  # env var when enabled.
+  # env var when enabled. When true, token-only admin API access is accepted
+  # only from loopback so the bot can call http://127.0.0.1:8080.
   bot: false

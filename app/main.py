@@ -52,7 +52,14 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="ProxyBox", version=VERSION, lifespan=lifespan)
+    app = FastAPI(
+        title="ProxyBox",
+        version=VERSION,
+        lifespan=lifespan,
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+    )
     app.include_router(system.router)
     app.include_router(devices.router)
     app.include_router(subscriptions.router)

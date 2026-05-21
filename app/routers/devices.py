@@ -271,6 +271,10 @@ async def delete_device(name: NameInPath, background_tasks: BackgroundTasks) -> 
         if row is None:
             raise HTTPException(404, "device not found")
         sub_token = row["sub_token"]
+        traffic_rows = conn.execute(
+            "DELETE FROM traffic_log WHERE device_name = ?", (name,)
+        ).rowcount
+        host_rows = conn.execute("DELETE FROM host_log WHERE device_name = ?", (name,)).rowcount
         conn.execute("DELETE FROM device WHERE name = ?", (name,))
         conn.commit()
 
@@ -283,6 +287,7 @@ async def delete_device(name: NameInPath, background_tasks: BackgroundTasks) -> 
     return {
         "name": name,
         "removed_inbounds": removed_tags,
+        "deleted_history_rows": traffic_rows + host_rows,
         "notice": "device deleted; sing-box reloading in background",
     }
 

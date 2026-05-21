@@ -15,7 +15,9 @@ plus apt packaging, systemd units, fail2ban jail, etc.
 from __future__ import annotations
 
 import base64
+import contextlib
 import json
+import os
 import secrets
 import subprocess
 import sys
@@ -31,6 +33,20 @@ SNI_CANDIDATES = (
     "www.cloudflare.com",
     "www.amazon.com",
 )
+
+
+def _write_private_text(path: Path, text: str, mode: int = 0o600) -> None:
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+        os.replace(tmp, path)
+        path.chmod(mode)
+    except BaseException:
+        with contextlib.suppress(FileNotFoundError):
+            tmp.unlink()
+        raise
 
 
 def _reality_keypair() -> tuple[str, str]:
@@ -127,8 +143,7 @@ def _gen_singbox_config(sb_dir: Path) -> None:
         "outbounds": [{"type": "direct", "tag": "direct"}],
     }
     out = sb_dir / "config.json"
-    out.write_text(json.dumps(cfg, indent=2))
-    out.chmod(0o600)
+    _write_private_text(out, json.dumps(cfg, indent=2))
 
 
 def _gen_admin_password() -> str:
@@ -196,8 +211,7 @@ features:
   bot: false
 """
     out = pb_dir / "config.yaml"
-    out.write_text(yaml_text)
-    out.chmod(0o600)
+    _write_private_text(out, yaml_text)
 
     # Write the password to its sibling file (mode 0400). Lazy import to
     # avoid a circular dep between config.py (PathsSettings) and the
@@ -219,6 +233,8 @@ def main() -> int:
     pb_dir = Path("/etc/proxybox")
     sb_dir.mkdir(parents=True, exist_ok=True)
     pb_dir.mkdir(parents=True, exist_ok=True)
+    sb_dir.chmod(0o700)
+    pb_dir.chmod(0o700)
 
     if not (sb_dir / "config.json").exists():
         _gen_singbox_config(sb_dir)

@@ -66,9 +66,7 @@ def test_build_vless_uri_shape():
         "vless_port": 11001,
     }
     uri = build_vless_uri(device, _fake_sb_cfg(priv_b64), "1.2.3.4")
-    assert uri.startswith(
-        "vless://00000000-0000-0000-0000-000000000001@1.2.3.4:11001?"
-    )
+    assert uri.startswith("vless://00000000-0000-0000-0000-000000000001@1.2.3.4:11001?")
     assert "security=reality" in uri
     assert "sni=www.example.com" in uri
     assert f"pbk={pub_b64}" in uri

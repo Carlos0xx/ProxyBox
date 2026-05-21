@@ -22,6 +22,8 @@ Security:
 
 from __future__ import annotations
 
+import contextlib
+import os
 import re
 import secrets
 import string
@@ -50,13 +52,23 @@ _LOGIN_PATH_DEFAULT_LEN = 12
 
 
 def _load_config() -> tuple[Path, dict]:
-    p = Path("/etc/proxybox/config.yaml")
+    p = Path(os.environ.get("PROXYBOX_CONFIG", "/etc/proxybox/config.yaml"))
     return p, yaml.safe_load(p.read_text(encoding="utf-8")) or {}
 
 
 def _save_config(p: Path, cfg: dict) -> None:
-    p.write_text(yaml.safe_dump(cfg, sort_keys=False, allow_unicode=True), encoding="utf-8")
-    p.chmod(0o600)
+    tmp = p.with_suffix(p.suffix + ".tmp")
+    data = yaml.safe_dump(cfg, sort_keys=False, allow_unicode=True)
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(data)
+        os.replace(tmp, p)
+        p.chmod(0o600)
+    except BaseException:
+        with contextlib.suppress(FileNotFoundError):
+            tmp.unlink()
+        raise
     reset_settings_cache()
 
 

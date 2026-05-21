@@ -11,6 +11,8 @@ authentication, so leaking it leaks the device. Rotate with
 from __future__ import annotations
 
 import base64
+import contextlib
+import os
 from pathlib import Path
 from typing import Any
 
@@ -239,11 +241,19 @@ def write_subscription_file(device: dict[str, Any], sb_cfg: dict[str, Any] | Non
     sub_dir.mkdir(parents=True, exist_ok=True)
     content = generate_subscription_text(device, sb_cfg)
     path = _sub_path(device["sub_token"])
-    path.write_text(content)
-    # 0600 — the file contains VLESS UUID + Hy2 password, equivalent to
-    # raw credentials. Only proxybox-admin reads it (via FastAPI handler
-    # under its own UID); no other process needs read access.
-    path.chmod(0o600)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    # 0600 from creation — the file contains VLESS UUID + Hy2 password,
+    # equivalent to raw credentials. Only proxybox-admin reads it.
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(content)
+        os.replace(tmp, path)
+        path.chmod(0o600)
+    except BaseException:
+        with contextlib.suppress(FileNotFoundError):
+            tmp.unlink()
+        raise
     return path
 
 

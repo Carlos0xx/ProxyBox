@@ -10,7 +10,7 @@ from __future__ import annotations
 import contextlib
 import copy
 import json
-import shutil
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -28,8 +28,17 @@ def read_config() -> dict[str, Any]:
 def write_config(cfg: dict[str, Any], *, defer_reload: bool = False) -> None:
     target = Path(get_settings().paths.singbox_config)
     tmp = target.with_suffix(target.suffix + ".new")
-    tmp.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
-    shutil.move(tmp, target)
+    data = json.dumps(cfg, indent=2, ensure_ascii=False)
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(data)
+        os.replace(tmp, target)
+        target.chmod(0o600)
+    except BaseException:
+        with contextlib.suppress(FileNotFoundError):
+            tmp.unlink()
+        raise
     if not defer_reload:
         reload_singbox()
 

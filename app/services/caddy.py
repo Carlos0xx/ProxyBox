@@ -27,6 +27,8 @@ failure with a structured ``code`` so the SPA can show a tailored message.
 
 from __future__ import annotations
 
+import contextlib
+import os
 import re
 import shutil
 import socket
@@ -236,13 +238,24 @@ def _write_caddyfile(domain: str) -> None:
 
 
 def _patch_config(domain: str) -> None:
-    cfg_path = Path("/etc/proxybox/config.yaml")
+    cfg_path = Path(os.environ.get("PROXYBOX_CONFIG", "/etc/proxybox/config.yaml"))
     cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
     cfg.setdefault("server", {})["public_host"] = domain
     pk = cfg.setdefault("passkey", {})
     pk["rp_id"] = domain
     pk["origin"] = f"https://{domain}"
-    cfg_path.write_text(yaml.safe_dump(cfg, sort_keys=False, allow_unicode=True), encoding="utf-8")
+    tmp = cfg_path.with_suffix(cfg_path.suffix + ".tmp")
+    data = yaml.safe_dump(cfg, sort_keys=False, allow_unicode=True)
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(data)
+        os.replace(tmp, cfg_path)
+        cfg_path.chmod(0o600)
+    except BaseException:
+        with contextlib.suppress(FileNotFoundError):
+            tmp.unlink()
+        raise
     # Drop the in-process settings cache so the running admin picks up the
     # new public_host without needing a self-restart (which would kill the
     # very request that's running this code).

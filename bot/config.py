@@ -7,6 +7,8 @@ Required env:
     BOT_TOKEN              Telegram bot token from @BotFather
     TG_ALLOWED_USERS       Comma-separated Telegram user IDs (whitelist)
     ADMIN_TOKEN            ProxyBox admin token (must match config.yaml admin.token)
+                            config.yaml also needs features.bot=true so token-only
+                            API access is accepted from 127.0.0.1 only.
 
 Optional env:
     PROXYBOX_API_URL       Default http://127.0.0.1:8080

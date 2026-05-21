@@ -11,6 +11,7 @@ mode for new repos).
 
 Exits 0 on clean, 1 on findings, 2 on tool error.
 """
+
 from __future__ import annotations
 
 import json
@@ -59,9 +60,7 @@ def main() -> int:
         # Hook mode: compare scan output against the baseline. Hook exits
         # non-zero only on findings that aren't already acknowledged.
         files = subprocess.check_output(["git", "ls-files"], text=True).splitlines()
-        rc = subprocess.call(
-            ["detect-secrets-hook", "--baseline", str(BASELINE), *files]
-        )
+        rc = subprocess.call(["detect-secrets-hook", "--baseline", str(BASELINE), *files])
         return 1 if rc != 0 else 0
 
     scan = _run_scan()

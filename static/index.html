@@ -2254,7 +2254,7 @@ a:hover { color: var(--accent-hover); }
         </div>
         <div style="padding: var(--space-4) var(--space-5); color: var(--text-3); font-size: var(--text-sm); line-height: 1.7;">
           <p><strong>注册:</strong>点上方"注册当前设备",系统会弹 Touch ID,确认后这台 Mac 的指纹就能登录后台了。iPhone 通过 iCloud Keychain 同步,Face ID 也能登。</p>
-          <p><strong>登录:</strong>下次开后台直接访问 <code style="background:var(--bg-canvas);padding:1px 6px;border-radius:3px;">https://your-domain.com/admin/</code>(不带 token),会跳到登录页 → 自动弹 Touch ID。</p>
+          <p><strong>登录:</strong>访问当前 <code style="background:var(--bg-canvas);padding:1px 6px;border-radius:3px;">/admin/&lt;TOKEN&gt;/</code> 后台 URL,会跳到登录页;Passkey 可用于登录 session。</p>
           <p><strong>登出:</strong>点上方"登出"清除 session,下次打开后台会重新要 Touch ID。</p>
           <p><strong>应急:</strong>Passkey 私钥只在你 Mac / iPhone 的 Secure Enclave 里,服务器不存。两台设备都丢了 → 用 SSH 读取 <code style="background:var(--bg-canvas);padding:1px 6px;border-radius:3px;">/etc/proxybox/admin.password</code>,然后用旧 URL 进后台。</p>
         </div>
@@ -2265,7 +2265,7 @@ a:hover { color: var(--accent-hover); }
         <div class="card-head">
           <div>
             <div class="card-title" style="color: var(--danger);">⚠️ URL Token 应急后门</div>
-            <div class="card-sub">/admin/&lt;TOKEN&gt;/ 这条路径绕过 Passkey, Mac/iPhone 全丢时救命用</div>
+            <div class="card-sub">/admin/&lt;TOKEN&gt;/ 仍是后台地址的一部分;Passkey/密码负责建立 session</div>
           </div>
           <button class="btn btn-sm" style="border:1px solid var(--danger); color:var(--danger); background:transparent;" onclick="rotateAdminToken()">
             🔄 轮换 (旧 URL 立即失效)
@@ -2273,9 +2273,9 @@ a:hover { color: var(--accent-hover); }
         </div>
         <div style="padding: var(--space-4) var(--space-5); color: var(--text-3); font-size: var(--text-sm); line-height: 1.7;">
           <p><strong>何时轮换:</strong>怀疑 URL 截图被拍 / 浏览器同步泄露 / 想彻底关闭 URL 后门。</p>
-          <p><strong>轮换会:</strong>生成新 32-hex token → 改 <code class="mono" style="background:var(--bg-canvas);padding:1px 6px;border-radius:3px;">/etc/proxybox/config.yaml</code> → 3 秒后自动重启 <code>proxybox-admin</code> + <code>proxybox-bot</code> (~3 秒中断,代理本身不受影响)</p>
+          <p><strong>轮换会:</strong>生成新 URL token → 改 <code class="mono" style="background:var(--bg-canvas);padding:1px 6px;border-radius:3px;">/etc/proxybox/config.yaml</code>,不需要重启服务;旧后台 URL 立即失效</p>
           <p><strong>不会影响:</strong>已注册的 Passkey, 已登录的 session, 任何订阅 URL (所有设备订阅照常)</p>
-          <p style="color:var(--warn);"><strong>注意:</strong>新 token 只显示一次,务必复制保存。后续访问 <code>https://your-domain.com/admin/</code> (不带 token) 用 Passkey 即可。</p>
+          <p style="color:var(--warn);"><strong>注意:</strong>新 token 只显示一次,务必复制保存。后续继续使用新的 <code>/admin/&lt;TOKEN&gt;/</code> 地址进入后台。</p>
         </div>
       </div>
     </section>

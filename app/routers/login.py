@@ -106,12 +106,77 @@ _LOGIN_HTML = """<!doctype html>
       <label>__LBL_PASSWORD__</label>
       <input type="password" name="password" required autocomplete="current-password">
       <button type="submit">__BTN_LOGIN__</button>
+      __PASSKEY_LOGIN__
       __ERROR__
     </form>
     <div class="hint">__HINT__</div>
   </div>
+  __PASSKEY_SCRIPT__
 </body>
 </html>
+"""
+
+_PASSKEY_LOGIN_HTML = """
+      <button type="button" id="passkey-login" style="margin-top:10px;background:#111827;">
+        Passkey / Touch ID
+      </button>
+"""
+
+_PASSKEY_LOGIN_SCRIPT = """
+  <script>
+    const b64ToBytes = s => {
+      s = s.replace(/-/g, '+').replace(/_/g, '/');
+      const bin = atob(s + '='.repeat((4 - s.length % 4) % 4));
+      return Uint8Array.from(bin, c => c.charCodeAt(0));
+    };
+    const bytesToB64 = b => btoa(String.fromCharCode(...new Uint8Array(b)))
+      .replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');
+    const passkeyBtn = document.getElementById('passkey-login');
+    if (passkeyBtn) {
+      passkeyBtn.addEventListener('click', async () => {
+        passkeyBtn.disabled = true;
+        passkeyBtn.textContent = 'Touch ID...';
+        try {
+          const begin = await fetch('/auth/webauthn/login/begin', {method: 'POST'});
+          if (!begin.ok) throw new Error(await begin.text());
+          const d1 = await begin.json();
+          const opts = d1.options;
+          opts.challenge = b64ToBytes(opts.challenge);
+          if (opts.allowCredentials) {
+            opts.allowCredentials = opts.allowCredentials.map(c => ({...c, id: b64ToBytes(c.id)}));
+          }
+          const cred = await navigator.credentials.get({publicKey: opts});
+          const assertion = {
+            id: cred.id,
+            rawId: bytesToB64(cred.rawId),
+            type: cred.type,
+            response: {
+              authenticatorData: bytesToB64(cred.response.authenticatorData),
+              clientDataJSON: bytesToB64(cred.response.clientDataJSON),
+              signature: bytesToB64(cred.response.signature),
+              userHandle: cred.response.userHandle ? bytesToB64(cred.response.userHandle) : null,
+            },
+          };
+          const complete = await fetch('/auth/webauthn/login/complete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              handle: d1.handle,
+              assertion,
+              next_path: new URLSearchParams(window.location.search).get('next') || '',
+            }),
+          });
+          if (!complete.ok) throw new Error(await complete.text());
+          const d2 = await complete.json();
+          window.location.href = d2.redirect || '/';
+        } catch (e) {
+          passkeyBtn.disabled = false;
+          passkeyBtn.textContent = 'Passkey / Touch ID';
+          alert('Passkey 登录失败: ' + e.message);
+        }
+      });
+    }
+  </script>
 """
 
 # Bilingual strings. The login page is server-rendered (the SPA's
@@ -186,6 +251,9 @@ def _render(
     body = body.replace("__LBL_PASSWORD__", s["lbl_password"])
     body = body.replace("__BTN_LOGIN__", s["btn_login"])
     body = body.replace("__HINT__", s["hint"])
+    passkey_on = bool(get_settings().features.passkey)
+    body = body.replace("__PASSKEY_LOGIN__", _PASSKEY_LOGIN_HTML if passkey_on else "")
+    body = body.replace("__PASSKEY_SCRIPT__", _PASSKEY_LOGIN_SCRIPT if passkey_on else "")
     headers = {
         "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
         "Pragma": "no-cache",
