@@ -17,7 +17,7 @@ bash deploy/docker-install.sh
 | 步骤 | 行为 |
 | --- | --- |
 | Docker 检查 | 检查 Docker CLI、Compose、daemon;缺失时 apt 安装 Docker/Compose,daemon 未运行时自动启动。 |
-| 端口扫描 | 8080 可用就用 8080;被占用就选 18080/28080/...。VLESS/Hy2 也会选择一整段空闲端口。 |
+| 端口扫描 | 确保 `ss`/`iproute2` 可用后精确检测监听端口。8080 可用就用 8080;被占用就选 18080/28080/...。VLESS/Hy2 也会选择一整段空闲端口。 |
 | 写 `.env` | 把选中的端口、public host、fresh 标记写进项目目录 `.env`。 |
 | 启动 stack | `docker compose up -d --build`,使用 bridge network + 显式 published ports。 |
 | 首台设备 | 如果设备列表为空,自动创建 5 个小写字母的随机设备名。`PROXYBOX_FIRST_DEVICE=` 可跳过。 |

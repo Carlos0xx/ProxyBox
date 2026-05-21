@@ -28,6 +28,8 @@ def test_compose_uses_bridge_network_and_env_published_ports() -> None:
 def test_docker_install_provisions_runtime_and_scans_ports() -> None:
     assert "ensure_docker_runtime" in DOCKER_INSTALL
     assert "install_docker_packages" in DOCKER_INSTALL
+    assert "iproute2" in DOCKER_INSTALL
+    assert "ensure_port_scanner" in DOCKER_INSTALL
     assert "docker.io" in DOCKER_INSTALL
     assert "docker-compose-plugin" in DOCKER_INSTALL
     assert "docker-compose-v2" in DOCKER_INSTALL
@@ -35,6 +37,8 @@ def test_docker_install_provisions_runtime_and_scans_ports() -> None:
     assert "systemctl enable --now docker" in DOCKER_INSTALL
     assert "service docker start" in DOCKER_INSTALL
     assert "docker info" in DOCKER_INSTALL
+    assert "sport = :$port" in DOCKER_INSTALL
+    assert "selected ports:" in DOCKER_INSTALL
     assert "choose_admin_port" in DOCKER_INSTALL
     assert "choose_block tcp" in DOCKER_INSTALL
     assert "choose_block udp" in DOCKER_INSTALL

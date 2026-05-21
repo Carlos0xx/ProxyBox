@@ -28,7 +28,7 @@ cd /opt/proxybox
 bash deploy/docker-install.sh
 ```
 
-`deploy/docker-install.sh` checks Docker/Compose, installs missing Docker packages, starts the Docker service, scans host ports, writes `.env`, and starts an isolated bridge-network stack. It does not install Python 3.11, write ProxyBox systemd units, enable fail2ban, configure Caddy, or touch SSH known_hosts on the host.
+`deploy/docker-install.sh` checks Docker/Compose and `ss`/`iproute2`, installs missing runtime packages, starts the Docker service, scans host ports, prints/writes the selected ports to `.env`, and starts an isolated bridge-network stack. It does not install Python 3.11, write ProxyBox systemd units, enable fail2ban, configure Caddy, or touch SSH known_hosts on the host.
 
 For a no-trace reinstall on reused Docker volumes:
 

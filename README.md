@@ -45,7 +45,7 @@ git clone https://github.com/carlos0xx/proxybox /opt/proxybox
 cd /opt/proxybox && bash deploy/docker-install.sh
 ```
 
-`deploy/docker-install.sh` installs/starts Docker and Compose if missing, scans host ports, keeps the defaults when free, otherwise picks a free admin port and free VLESS/Hy2 port blocks, then writes them to `.env`. The stack uses Docker bridge networking and only publishes those selected ports; it does not install or rewrite host Python, ProxyBox systemd units, fail2ban, Caddy, or SSH known_hosts. If the device list is empty, it auto-creates one random five-letter lowercase device.
+`deploy/docker-install.sh` installs/starts Docker, Compose, and the port scanner if missing, scans host ports, keeps the defaults when free, otherwise picks a free admin port and free VLESS/Hy2 port blocks, then prints and writes them to `.env`. The stack uses Docker bridge networking and only publishes those selected ports; it does not install or rewrite host Python, ProxyBox systemd units, fail2ban, Caddy, or SSH known_hosts. If the device list is empty, it auto-creates one random five-letter lowercase device.
 
 For a no-trace reinstall on reused Docker volumes:
 

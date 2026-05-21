@@ -60,7 +60,7 @@ install_docker_packages() {
     info "installing Docker runtime packages"
     "${SUDO[@]}" env DEBIAN_FRONTEND=noninteractive apt-get update -qq
     "${SUDO[@]}" env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-        git curl ca-certificates docker.io
+        git curl ca-certificates iproute2 docker.io
     if ! "${SUDO[@]}" env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
         docker-compose-plugin; then
         if ! "${SUDO[@]}" env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
@@ -110,7 +110,9 @@ start_docker_service() {
 
 ensure_docker_runtime() {
     setup_privilege
-    if ! command -v docker >/dev/null 2>&1 || ! command -v curl >/dev/null 2>&1; then
+    if ! command -v docker >/dev/null 2>&1 \
+        || ! command -v curl >/dev/null 2>&1 \
+        || ! command -v ss >/dev/null 2>&1; then
         install_docker_packages
     fi
 
@@ -121,13 +123,22 @@ ensure_docker_runtime() {
         start_docker_service
     fi
     have_docker_compose || die "Docker Compose is required but could not be installed"
+    ensure_port_scanner
 }
 
-ss_listen() {
-    local proto="$1"
-    if ! command -v ss >/dev/null 2>&1; then
-        return 0
+ensure_port_scanner() {
+    if command -v ss >/dev/null 2>&1; then
+        return
     fi
+    check_supported_os
+    info "installing port scanner (iproute2)"
+    "${SUDO[@]}" env DEBIAN_FRONTEND=noninteractive apt-get update -qq
+    "${SUDO[@]}" env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq iproute2
+    command -v ss >/dev/null 2>&1 || die "ss is required for safe port detection"
+}
+
+ss_local_addresses() {
+    local proto="$1"
     case "$proto" in
         tcp) ss -H -ltn 2>/dev/null || true ;;
         udp) ss -H -lun 2>/dev/null || true ;;
@@ -137,7 +148,25 @@ ss_listen() {
 
 port_busy() {
     local proto="$1" port="$2"
-    ss_listen "$proto" | awk '{print $4}' | grep -Eq "(^|[^0-9])${port}$"
+    local filter_opts=()
+    case "$proto" in
+        tcp) filter_opts=(-H -ltn) ;;
+        udp) filter_opts=(-H -lun) ;;
+        *) return 1 ;;
+    esac
+
+    if ss "${filter_opts[@]}" "sport = :$port" 2>/dev/null | grep -q .; then
+        return 0
+    fi
+    ss_local_addresses "$proto" | awk -v port="$port" '
+        {
+            local_addr = $4
+            if (local_addr ~ ("(^|[^0-9])" port "$")) {
+                found = 1
+            }
+        }
+        END { exit found ? 0 : 1 }
+    '
 }
 
 range_free() {
@@ -223,6 +252,26 @@ PROXYBOX_HY2_START=${hy2_start}
 PROXYBOX_HY2_END=${hy2_end}
 PROXYBOX_FRESH=${PROXYBOX_FRESH:-0}
 EOF
+    info "selected ports: admin=${admin_port}/tcp, vless=${vless_template}+${vless_start}-${vless_end}/tcp, hy2=${hy2_template}+${hy2_start}-${hy2_end}/udp"
+}
+
+env_value() {
+    local key="$1"
+    awk -F= -v key="$key" '$1 == key { print substr($0, index($0, "=") + 1) }' "$ENV_FILE" \
+        | tail -n 1
+}
+
+print_selected_ports() {
+    [ -f "$ENV_FILE" ] || return
+    local admin_port vless_template vless_start vless_end hy2_template hy2_start hy2_end
+    admin_port="$(env_value PROXYBOX_ADMIN_PORT)"
+    vless_template="$(env_value PROXYBOX_VLESS_TEMPLATE_PORT)"
+    vless_start="$(env_value PROXYBOX_VLESS_START)"
+    vless_end="$(env_value PROXYBOX_VLESS_END)"
+    hy2_template="$(env_value PROXYBOX_HY2_TEMPLATE_PORT)"
+    hy2_start="$(env_value PROXYBOX_HY2_START)"
+    hy2_end="$(env_value PROXYBOX_HY2_END)"
+    info "selected ports: admin=${admin_port:-8080}/tcp, vless=${vless_template:-11000}+${vless_start:-11001}-${vless_end:-11050}/tcp, hy2=${hy2_template:-21000}+${hy2_start:-21001}-${hy2_end:-21050}/udp"
 }
 
 bootstrap_first_device() {
@@ -342,6 +391,7 @@ main() {
 
     if [ -f "$ENV_FILE" ] && [ "${PROXYBOX_REWRITE_ENV:-0}" != "1" ]; then
         info "using existing .env (set PROXYBOX_FRESH=1 PROXYBOX_REWRITE_ENV=1 for a clean port rescan)"
+        print_selected_ports
     else
         info "scanning free host ports and writing .env"
         write_env_file
