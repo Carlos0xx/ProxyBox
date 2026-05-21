@@ -40,11 +40,12 @@ def test_service_restart_button_uses_css_pseudo_icon() -> None:
     assert 'content: ""' in STATIC_HTML
     assert 'background-image: url("data:image/svg+xml' in STATIC_HTML
     assert "stroke='%23ea580c'" in STATIC_HTML
-    assert "min-height: 264px" in STATIC_HTML
-    assert "background-size: 20px 20px" in STATIC_HTML
-    assert "width: 20px" in STATIC_HTML
-    assert "height: 52px" in STATIC_HTML
+    assert "min-height: 182px" in STATIC_HTML
+    assert "background-size: 14px 14px" in STATIC_HTML
+    assert "width: 14px" in STATIC_HTML
+    assert "height: 36px" in STATIC_HTML
     assert "color: #ea580c" in STATIC_HTML
+    assert "font-weight: var(--weight-medium)" in STATIC_HTML
     assert "display: flex !important" in STATIC_HTML
     assert "white-space: nowrap !important" in STATIC_HTML
     assert "writing-mode: horizontal-tb !important" in STATIC_HTML
