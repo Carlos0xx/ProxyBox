@@ -171,6 +171,82 @@ def test_docker_status_uses_internal_runtime_probes(monkeypatch, tmp_path: Path)
     assert system_stats.systemctl_is_active("proxybox-traffic-worker") == "active"
 
 
+def test_project_port_statuses_include_native_service_ports(monkeypatch, tmp_path: Path) -> None:
+    singbox_config = tmp_path / "sing-box.json"
+    singbox_config.write_text(
+        json.dumps(
+            {
+                "inbounds": [
+                    {"type": "vless", "tag": "vless-template", "listen_port": 11100},
+                    {"type": "vless", "tag": "vless-phone", "listen_port": 11101},
+                    {"type": "hysteria2", "tag": "hy2-phone", "listen_port": 22101},
+                ]
+            }
+        )
+    )
+    settings = SimpleNamespace(
+        admin=SimpleNamespace(port=18080),
+        clash=SimpleNamespace(api_url="http://127.0.0.1:19090"),
+        paths=SimpleNamespace(singbox_config=singbox_config),
+        services=SimpleNamespace(monitored=[]),
+    )
+    monkeypatch.delenv("PROXYBOX_RUNTIME", raising=False)
+    monkeypatch.setattr(
+        system_stats,
+        "_port_listening_state",
+        lambda proto, port: "failed" if (proto, port) == ("udp", 22101) else "active",
+    )
+    monkeypatch.setattr(system_stats, "_tcp_connect_state", lambda _host, _port: "active")
+
+    rows = system_stats.project_port_statuses(settings)
+    by_label = {row["label"]: row for row in rows}
+
+    assert by_label["Admin UI"]["port"] == 18080
+    assert by_label["Clash API"]["port"] == 19090
+    assert by_label["VLESS 模板"]["status"] == "active"
+    assert by_label["VLESS · phone"]["proto"] == "tcp"
+    assert by_label["Hy2 · phone"]["proto"] == "udp"
+    assert by_label["Hy2 · phone"]["status"] == "failed"
+
+
+def test_docker_project_port_statuses_use_internal_service_health(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    singbox_config = tmp_path / "sing-box.json"
+    singbox_config.write_text(
+        json.dumps(
+            {
+                "inbounds": [
+                    {"type": "vless", "tag": "vless-template", "listen_port": 12000},
+                    {"type": "hysteria2", "tag": "hy2-template", "listen_port": 22000},
+                ]
+            }
+        )
+    )
+    settings = SimpleNamespace(
+        admin=SimpleNamespace(port=18080),
+        clash=SimpleNamespace(api_url="http://sing-box:19090"),
+        paths=SimpleNamespace(singbox_config=singbox_config),
+        services=SimpleNamespace(monitored=["sing-box", "proxybox-admin"]),
+    )
+    monkeypatch.setenv("PROXYBOX_RUNTIME", "docker")
+    monkeypatch.setattr(system_stats, "_clash_api_state", lambda: "active")
+    monkeypatch.setattr(
+        system_stats,
+        "systemctl_is_active",
+        lambda unit: "active" if unit in {"sing-box", "proxybox-admin"} else "unknown",
+    )
+
+    rows = system_stats.project_port_statuses(settings)
+    by_label = {row["label"]: row for row in rows}
+
+    assert by_label["Admin UI"]["status"] == "active"
+    assert by_label["Clash API"]["host"] == "sing-box"
+    assert by_label["VLESS 模板"]["host"] == "sing-box"
+    assert by_label["Hy2 模板"]["status"] == "active"
+
+
 def test_connections_use_configured_clash_api(monkeypatch) -> None:
     calls: list[tuple[str, str]] = []
 

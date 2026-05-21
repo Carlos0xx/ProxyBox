@@ -3693,7 +3693,7 @@ function renderServices() {
     desc: META[name]?.desc || '',
     restart: META[name]?.restart ?? true,
   }));
-  $('services-grid').innerHTML = services.map(s => {
+  const serviceCards = services.map(s => {
     const st = lastStatus?.services?.[s.name] || 'unknown';
     const ok = st === 'active';
     return `<div class="card card-static svc-card">
@@ -3710,7 +3710,31 @@ function renderServices() {
       </div>
       ${s.restart ? `<button class="btn btn-sm btn-warn btn-svc-restart" data-restart-svc="${escapeHtml(s.name)}">重启服务</button>` : ''}
     </div>`;
-  }).join('');
+  });
+  const portCards = (lastStatus?.ports || []).map(p => {
+    const st = p.status || 'unknown';
+    const ok = st === 'active';
+    const stateText = ok ? '监听中' : (st === 'failed' ? '未监听' : st);
+    const proto = (p.proto || '').toUpperCase();
+    const host = p.host ? ` · ${p.host}` : '';
+    return `<div class="card card-static svc-card port-card">
+      <div class="svc-card-head">
+        <div>
+          <div style="font-size: var(--text-base); font-weight: var(--weight-semibold);">${escapeHtml(p.label || '端口')}</div>
+          <div style="font-size: var(--text-xs); color: var(--text-4); margin-top: 2px;">${escapeHtml(p.desc || '项目端口')}</div>
+          <div style="font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--text-5); margin-top: 4px;">${escapeHtml(p.owner || 'proxybox')}${escapeHtml(host)}</div>
+        </div>
+        <span class="badge ${ok ? 'badge-accent' : 'badge-danger'}">
+          <span class="dot ${ok ? 'dot-ok dot-pulse' : 'dot-bad'}"></span>
+          ${escapeHtml(stateText)}
+        </span>
+      </div>
+      <div class="badge" style="margin-top:auto; width:100%; justify-content:center; height:36px; font-family:var(--font-mono); font-size:var(--text-sm);">
+        ${escapeHtml(proto)} :${escapeHtml(p.port)}
+      </div>
+    </div>`;
+  });
+  $('services-grid').innerHTML = [...serviceCards, ...portCards].join('');
 }
 
 async function restartSvc(svc) {

@@ -53,6 +53,7 @@ async def status() -> dict:
         "services": {
             unit: system_stats.systemctl_is_active(unit) for unit in settings.services.monitored
         },
+        "ports": system_stats.project_port_statuses(settings),
         "load": system_stats.loadavg(),
         "uptime": system_stats.uptime_pretty(),
         "mem": system_stats.mem_stats(),

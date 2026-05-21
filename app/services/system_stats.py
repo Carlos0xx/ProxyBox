@@ -7,10 +7,14 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import socket
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from typing import Any
+from urllib.parse import urlparse
 
 from app.services.shell import run
 
@@ -25,6 +29,76 @@ def systemctl_is_active(unit: str) -> str:
     return run(["systemctl", "is-active", unit]).strip() or "unknown"
 
 
+def project_port_statuses(settings: Any | None = None) -> list[dict[str, Any]]:
+    """Return health rows for every ProxyBox service port we know about.
+
+    Native installs can inspect host sockets with ``ss``. Docker installs run
+    inside the admin container, so they cannot reliably inspect host-published
+    ports; for those rows we use the owning service's internal health probe.
+    """
+    if settings is None:
+        from app.config import get_settings
+
+        settings = get_settings()
+
+    docker = runtime_is_docker()
+    rows: list[dict[str, Any]] = []
+
+    admin_port = int(getattr(settings.admin, "port", 8080) or 8080)
+    rows.append(
+        _port_row(
+            key=f"admin:tcp:{admin_port}",
+            label="Admin UI",
+            desc="Web 后台",
+            proto="tcp",
+            port=admin_port,
+            owner="proxybox-admin",
+            status=systemctl_is_active("proxybox-admin")
+            if docker
+            else _port_listening_state("tcp", admin_port),
+        )
+    )
+
+    clash_url = str(getattr(settings.clash, "api_url", "") or "")
+    clash_host, clash_port = _url_host_port(clash_url)
+    if clash_port:
+        rows.append(
+            _port_row(
+                key=f"clash:tcp:{clash_port}",
+                label="Clash API",
+                desc="sing-box 控制接口",
+                proto="tcp",
+                port=clash_port,
+                owner="sing-box",
+                host=clash_host,
+                status=_clash_api_state()
+                if docker
+                else _tcp_connect_state(clash_host or "127.0.0.1", clash_port),
+            )
+        )
+
+    singbox_state = systemctl_is_active("sing-box")
+    for row in _singbox_port_rows(settings, docker=docker, singbox_state=singbox_state):
+        rows.append(row)
+
+    monitored = set(getattr(getattr(settings, "services", None), "monitored", []) or [])
+    if "caddy" in monitored or (not docker and systemctl_is_active("caddy") == "active"):
+        for port, label in ((80, "HTTP"), (443, "HTTPS")):
+            rows.append(
+                _port_row(
+                    key=f"caddy:tcp:{port}",
+                    label=f"Caddy {label}",
+                    desc="HTTPS 反向代理",
+                    proto="tcp",
+                    port=port,
+                    owner="caddy",
+                    status=_port_listening_state("tcp", port) if not docker else "unknown",
+                )
+            )
+
+    return _dedupe_ports(rows)
+
+
 def _docker_service_state(unit: str) -> str:
     if unit == "proxybox-admin":
         return "active"
@@ -33,6 +107,138 @@ def _docker_service_state(unit: str) -> str:
     if unit == "sing-box":
         return _clash_api_state()
     return "unknown"
+
+
+def _port_row(
+    *,
+    key: str,
+    label: str,
+    desc: str,
+    proto: str,
+    port: int,
+    owner: str,
+    status: str,
+    host: str = "",
+) -> dict[str, Any]:
+    return {
+        "key": key,
+        "label": label,
+        "desc": desc,
+        "proto": proto,
+        "port": port,
+        "owner": owner,
+        "host": host,
+        "status": status or "unknown",
+    }
+
+
+def _url_host_port(url: str) -> tuple[str, int | None]:
+    if not url:
+        return "", None
+    parsed = urlparse(url)
+    if not parsed.hostname:
+        return "", None
+    if parsed.port:
+        return parsed.hostname, parsed.port
+    if parsed.scheme == "https":
+        return parsed.hostname, 443
+    if parsed.scheme == "http":
+        return parsed.hostname, 80
+    return parsed.hostname, None
+
+
+def _singbox_port_rows(settings: Any, *, docker: bool, singbox_state: str) -> list[dict[str, Any]]:
+    try:
+        cfg = json.loads(Path(settings.paths.singbox_config).read_text())
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
+        return []
+
+    rows: list[dict[str, Any]] = []
+    for inbound in cfg.get("inbounds", []):
+        if not isinstance(inbound, dict):
+            continue
+        try:
+            port = int(inbound.get("listen_port"))
+        except (TypeError, ValueError):
+            continue
+        kind = str(inbound.get("type") or "")
+        tag = str(inbound.get("tag") or kind or f"port-{port}")
+        proto = _inbound_proto(kind)
+        label = _inbound_label(tag, kind)
+        status = singbox_state if docker else _port_listening_state(proto, port)
+        rows.append(
+            _port_row(
+                key=f"sing-box:{proto}:{port}:{tag}",
+                label=label,
+                desc=f"sing-box · {tag}",
+                proto=proto,
+                port=port,
+                owner="sing-box",
+                host="sing-box" if docker else "",
+                status=status,
+            )
+        )
+    return rows
+
+
+def _inbound_proto(kind: str) -> str:
+    return "udp" if kind in {"hysteria2", "hysteria", "tuic"} else "tcp"
+
+
+def _inbound_label(tag: str, kind: str) -> str:
+    if tag == "vless-template":
+        return "VLESS 模板"
+    if tag == "hy2-template":
+        return "Hy2 模板"
+    if tag.startswith("vless-"):
+        return f"VLESS · {tag.removeprefix('vless-')}"
+    if tag.startswith("hy2-"):
+        return f"Hy2 · {tag.removeprefix('hy2-')}"
+    return tag or kind or "sing-box"
+
+
+def _port_listening_state(proto: str, port: int) -> str:
+    option = "-ltn" if proto == "tcp" else "-lun"
+    out = run(["ss", "-H", option, "sport", "=", f":{port}"], timeout=2)
+    if out.strip():
+        return "active"
+    # Some older ss builds are fussy about split filters. Fall back to parsing
+    # the full listener list before marking the port failed.
+    out = run(["ss", "-H", option], timeout=2)
+    return "active" if port in _parse_ss_ports(out) else "failed"
+
+
+def _parse_ss_ports(output: str) -> set[int]:
+    ports: set[int] = set()
+    for line in output.splitlines():
+        for match in re.finditer(r":(\d+)(?:\s|$)", line):
+            with_context = match.group(1)
+            try:
+                ports.add(int(with_context))
+            except ValueError:
+                continue
+    return ports
+
+
+def _tcp_connect_state(host: str, port: int) -> str:
+    target = "127.0.0.1" if host in {"", "0.0.0.0", "::"} else host
+    try:
+        with socket.create_connection((target, port), timeout=1):
+            return "active"
+    except OSError:
+        return "failed"
+
+
+def _dedupe_ports(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen: set[tuple[str, int, str]] = set()
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        marker = (str(row.get("proto")), int(row.get("port") or 0), str(row.get("owner")))
+        if marker in seen:
+            continue
+        seen.add(marker)
+        out.append(row)
+    return out
 
 
 def _heartbeat_state() -> str:

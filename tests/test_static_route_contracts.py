@@ -72,3 +72,11 @@ def test_service_status_dots_do_not_clobber_restart_buttons() -> None:
     assert "$$('.svc-dot[data-svc]').forEach" in STATIC_HTML
     assert "$$('[data-svc]').forEach" not in STATIC_HTML
     assert "restartSvc(btn.dataset.restartSvc)" in STATIC_HTML
+
+
+def test_services_view_renders_project_port_cards() -> None:
+    assert "lastStatus?.ports" in STATIC_HTML
+    assert "port-card" in STATIC_HTML
+    assert "监听中" in STATIC_HTML
+    assert "未监听" in STATIC_HTML
+    assert "项目端口" in STATIC_HTML
