@@ -60,7 +60,7 @@ sudo bash deploy/check-prereqs.sh --install  # also apt-install missing apt deps
 | 4 | **sing-box systemd unit** — `/etc/systemd/system/sing-box.service`. |
 | 5 | **Reality keypair** (X25519), **Hy2 self-signed cert**, random **SNI** picked per install, `experimental.clash_api` enabled. |
 | 6 | **Python venv** at `/opt/proxybox/.venv` + `pip install -e .`. |
-| 7 | **`/etc/proxybox/config.yaml`** — random `admin.token` (24 bytes), random `admin.password` (16 alnum), random `admin.login_path` (12 alnum), `server.public_host` auto-detected via `ifconfig.me` / `ipify.org`. Mode 0600, root-owned. |
+| 7 | **`/etc/proxybox/config.yaml`** — random `admin.token` (24 bytes), random `admin.login_path` (12 alnum), `server.public_host` auto-detected via `ifconfig.me` / `ipify.org`. Mode 0600, root-owned. **The password lives separately** at `/etc/proxybox/admin.password` (mode 0400, root-owned) so a casual `cat config.yaml` cannot leak it. |
 | 8 | **fail2ban `[manual]` jail** with `backend=systemd` (Debian 13 has no `/var/log/auth.log`). |
 | 9 | **Four systemd units** — `proxybox-admin`, `proxybox-traffic-worker`, `proxybox-bot` (disabled by default). |
 | 10 | `systemctl enable --now` for core services. |

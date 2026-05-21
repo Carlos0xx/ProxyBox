@@ -41,7 +41,7 @@ Read the freshly generated credentials:
 
 ```bash
 docker compose exec proxybox-admin \
-    sh -c 'grep -E "username|password|login_path" /etc/proxybox/config.yaml'
+    sh -c 'cat /etc/proxybox/admin.password; grep -E "username|login_path" /etc/proxybox/config.yaml'
 ```
 
 Open `http://<host>:8080/login/<login_path>` in a browser. Username `admin`, password as printed.

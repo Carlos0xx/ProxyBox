@@ -94,7 +94,7 @@ Base: `/admin/{token}/api/admin`.
 | Method · Path | Notes |
 | --- | --- |
 | `GET /account` | Returns `{username, login_path}`. Password is never returned. |
-| `POST /account` | Body: `{username?, current_password, new_password?}`. Constant-time compare on `current_password`. Atomic write of `config.yaml`. |
+| `POST /account` | Body: `{username?, current_password, new_password?}`. Constant-time compare on `current_password`. Atomic write — username lands in `config.yaml`, new password lands in `/etc/proxybox/admin.password` (mode 0400). |
 | `POST /login-path` | Rotate the random suffix on `/login`. Returns the new `login_url`. Session cookie remains valid. |
 
 ---

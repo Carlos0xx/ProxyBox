@@ -3903,6 +3903,7 @@ const DELEGATED_BUTTON_HANDLERS = [
   ['.btn-svc-restart',    (btn) => restartSvc(btn.dataset.svc)],
   ['.btn-history-jump',   (btn) => btn.dataset.name && jumpToHistory(btn.dataset.name)],
   ['.btn-rotate-in-dialog', (btn) => { closeDialog(); rotateDeviceToken(btn.dataset.name); }],
+  ['.btn-copy-all-subs',  (btn) => copyAllSubUrls(btn.dataset.baseUrl)],
   ['.btn-conn-rename',    (btn) => openRenameDialog(btn.dataset.ip)],
   ['.btn-conn-block',     (btn) => blockIPDirect(btn.dataset.ip)],
   ['.conn-row-toggle',    (btn) => toggleExpand(btn, btn.dataset.ip)],
@@ -4800,7 +4801,7 @@ async function showDeviceSubs(name) {
       </div>
 
       <div style="display: flex; gap: var(--space-2); padding: var(--space-2) 0 var(--space-4); border-top: 1px solid var(--border-default); margin-top: var(--space-2);">
-        <button class="btn btn-sm" onclick="copyAllSubUrls(${JSON.stringify(baseUrl)})">📋 复制全部 URL</button>
+        <button class="btn btn-sm btn-copy-all-subs" data-base-url="${escapeHtml(baseUrl)}">📋 复制全部 URL</button>
         ${!isLegacy ? `<button class="btn btn-sm btn-rotate-in-dialog" data-name="${escapeHtml(name)}">🔄 换 URL</button>` : ''}
       </div>
     </div>

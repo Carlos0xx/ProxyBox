@@ -70,7 +70,7 @@ docker compose up -d
 多架构镜像在 `ghcr.io/carlos0xx/proxybox:latest`。这个路径不带 fail2ban 和 HTTPS UI —— 生产环境请配 Caddy + 主机防火墙。
 
 > [!IMPORTANT]
-> 安装器**只打印一次**登录地址 + 密码。关闭终端前抄进密码管理器 —— 凭据也存在 `/etc/proxybox/config.yaml` 里。
+> 安装器**只打印一次**登录地址 + 密码。关闭终端前抄进密码管理器。SSH 找回:`cat /etc/proxybox/admin.password` (0400) 拿密码,其余在 `/etc/proxybox/config.yaml`。
 
 ---
 

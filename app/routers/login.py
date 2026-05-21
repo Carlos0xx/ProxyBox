@@ -17,6 +17,7 @@ flow.
 
 from __future__ import annotations
 
+import asyncio
 import html
 import secrets
 from typing import Annotated
@@ -30,6 +31,7 @@ from app.auth.passkey import (
     issue_session_cookie,
 )
 from app.config import get_settings
+from app.services import login_rate_limit
 
 router = APIRouter(tags=["login"])
 
@@ -267,6 +269,24 @@ def _request_is_https(request: Request) -> bool:
     return request.url.scheme == "https"
 
 
+def _client_ip(request: Request) -> str:
+    """Best-effort client IP for rate-limit keying.
+
+    Trusts ``X-Forwarded-For`` because Caddy / nginx terminate TLS in
+    front of uvicorn-on-127.0.0.1, so the raw ``request.client`` is
+    always the loopback address. If there's no proxy header we fall
+    through to the socket peer.
+    """
+    fwd = request.headers.get("x-forwarded-for", "")
+    if fwd:
+        # XFF is "client, proxy1, proxy2, ..." — first entry is the
+        # originating client. Strip whitespace, ignore empties.
+        first = fwd.split(",", 1)[0].strip()
+        if first:
+            return first
+    return request.client.host if request.client else "unknown"
+
+
 async def _do_login(
     request: Request,
     username: str,
@@ -281,16 +301,26 @@ async def _do_login(
     if not settings.admin.password:
         raise HTTPException(
             503,
-            "password login not configured — set admin.password in /etc/proxybox/config.yaml "
+            "password login not configured — see /etc/proxybox/admin.password "
             "or enable features.url_token_bypass for token-only access",
         )
+
+    # Rate-limit BEFORE comparing credentials so timing attacks against a
+    # high-fail-count IP slow down too. asyncio.sleep is cooperative, so
+    # this only blocks the offender's request, not the rest of the server.
+    ip = _client_ip(request)
+    delay = login_rate_limit.delay_for(ip)
+    if delay > 0:
+        await asyncio.sleep(delay)
 
     user_ok = secrets.compare_digest(username.encode(), settings.admin.username.encode())
     pass_ok = secrets.compare_digest(password.encode(), settings.admin.password.encode())
     if not (user_ok and pass_ok):
+        login_rate_limit.record_fail(ip)
         action = _login_url(f"?next={html.escape(next_path)}" if next_path else "")
         return _render(action=action, error="creds", status=401, lang=lang)
 
+    login_rate_limit.record_success(ip)
     target = _post_login_destination(next_path, settings.admin.token)
     resp = RedirectResponse(target, status_code=303)
     resp.set_cookie(

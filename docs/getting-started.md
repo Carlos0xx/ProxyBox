@@ -63,7 +63,11 @@ The installer is idempotent — safe to re-run mid-way. It performs:
 8. **Print the handoff** — the login URL, username, password, and 5 subscription URLs in a single self-contained block.
 
 > [!IMPORTANT]
-> Copy the credentials into a password manager **before closing the terminal**. They are also stored in `/etc/proxybox/config.yaml` under `admin.username` / `admin.password` / `admin.login_path`.
+> Copy the credentials into a password manager **before closing the terminal**. Recovery via SSH:
+> ```bash
+> cat /etc/proxybox/admin.password        # mode 0400, password only
+> grep -E "username|login_path" /etc/proxybox/config.yaml
+> ```
 
 Full reference: [`deploy/install-sh.md`](./deploy/install-sh.md).
 
@@ -75,7 +79,7 @@ Full reference: [`deploy/install-sh.md`](./deploy/install-sh.md).
 git clone https://github.com/carlos0xx/proxybox && cd proxybox
 docker compose up -d
 docker compose exec proxybox-admin \
-    sh -c 'grep -E "username|password|login_path" /etc/proxybox/config.yaml'
+    sh -c 'cat /etc/proxybox/admin.password; grep -E "username|login_path" /etc/proxybox/config.yaml'
 ```
 
 A one-shot `bootstrap` container generates `config.yaml` on first start. Volumes preserve state across `docker compose down`/`up`.

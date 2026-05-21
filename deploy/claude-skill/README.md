@@ -40,7 +40,7 @@ The next Claude Code session sees the skill. Confirm with `claude /skills` or ju
 
 | Feature | Since | Skill behaviour |
 | --- | --- | --- |
-| Username + password login form | v0.1.6 | Surfaces `admin.username` + `admin.password` + `admin.login_path` in the handoff. |
+| Username + password login form | v0.1.6 | Surfaces `admin.username` (config.yaml) + the password file (`/etc/proxybox/admin.password`, mode 0400) + `admin.login_path` (config.yaml) in the handoff. |
 | HTTPS provisioning from the UI | v0.1.10 | Tells the user they can switch to HTTPS later from the panel — no SSH required. |
 | Account self-service | v0.1.11 | Mentions the rotation options in the *Security* page. |
 | Per-line copy buttons | v0.1.12 | Confirms the SPA's copy buttons work over HTTP. |
@@ -53,7 +53,7 @@ The next Claude Code session sees the skill. Confirm with `claude /skills` or ju
 The skill instructs Claude to:
 
 1. Echo the **full login URL** (it contains the URL-path token, but the token alone is useless without the password).
-2. Echo the **freshly generated `admin.password`** so the user can paste it into a password manager.
+2. Echo the **freshly generated admin password** (the new install wrote it to `/etc/proxybox/admin.password` mode 0400, not into `config.yaml`) so the user can paste it into a password manager.
 3. **Never echo the bare `admin.token`** outside the login URL context — no quoting it back in commentary, no writing it to logs.
 
 The credentials live only on the VPS in `/etc/proxybox/config.yaml`. The skill does not persist them locally.
@@ -61,7 +61,7 @@ The credentials live only on the VPS in `/etc/proxybox/config.yaml`. The skill d
 > [!NOTE]
 > The handoff prints the password and login URL once. If the user closes the session before copying, they retrieve both via SSH:
 > ```bash
-> grep -E "username|password|login_path" /etc/proxybox/config.yaml
+> cat /etc/proxybox/admin.password; grep -E "username|login_path" /etc/proxybox/config.yaml
 > ```
 
 ---

@@ -73,7 +73,7 @@ bash deploy/install.sh --lang en       # or --lang zh
 Idempotent — safe to re-run if it bails mid-way. End-to-end ~3 minutes. Prints a self-contained handoff: **login URL · username · password · 5 subscription URLs**.
 
 > [!IMPORTANT]
-> Copy the credentials into a password manager **before closing the terminal**. They're also persisted to `/etc/proxybox/config.yaml`.
+> Copy the credentials into a password manager **before closing the terminal**. Recovery via SSH: `cat /etc/proxybox/admin.password` (mode 0400) for the password; the rest is in `/etc/proxybox/config.yaml`.
 
 #### Path C — Docker Compose
 
@@ -81,7 +81,7 @@ Idempotent — safe to re-run if it bails mid-way. End-to-end ~3 minutes. Prints
 git clone https://github.com/carlos0xx/proxybox && cd proxybox
 docker compose up -d
 docker compose exec proxybox-admin \
-    sh -c 'grep -E "username|password|login_path" /etc/proxybox/config.yaml'
+    sh -c 'cat /etc/proxybox/admin.password; grep -E "username|login_path" /etc/proxybox/config.yaml'
 ```
 
 Bootstrap container generates the config on first start. No fail2ban, no HTTPS UI on this path — pair with Caddy + a host firewall for production.
@@ -145,7 +145,7 @@ All from the panel — no SSH needed for anything below.
 | Service shows "unknown" on Services page | Not in `services.monitored` or not installed (e.g. `caddy` before HTTPS is on — normal). |
 | HTTPS provisioning → `dns_mismatch` | Your domain doesn't resolve to this VPS. Update the A record and retry. |
 | Traffic page shows 0 while browsing | The worker took its first sample but no buckets are flushed yet. Check `journalctl -u proxybox-traffic-worker -n 20`. |
-| Forgot login URL or password | `ssh root@<VPS>` → `grep -E "username\|password\|login_path" /etc/proxybox/config.yaml`. |
+| Forgot login URL or password | `ssh root@<VPS>` → `cat /etc/proxybox/admin.password; grep -E "username\|login_path" /etc/proxybox/config.yaml`. |
 
 Logs for any tracked service are live on the **Logs** page.
 
@@ -222,7 +222,7 @@ bash deploy/install.sh --lang zh       # 或 --lang en
 幂等 —— 中途断了重跑没事。端到端 ~3 分钟。打印自包含的凭据 + 订阅 URL:**登录地址 · 用户名 · 密码 · 5 个订阅 URL**。
 
 > [!IMPORTANT]
-> **关闭终端前**先把凭据抄到密码管理器。完整凭据也存在 `/etc/proxybox/config.yaml`。
+> **关闭终端前**先把凭据抄到密码管理器。SSH 找回:密码在 `/etc/proxybox/admin.password` (0400),其余 (用户名 / login_path / token) 在 `/etc/proxybox/config.yaml`。
 
 #### 方式 C — Docker Compose
 
@@ -230,7 +230,7 @@ bash deploy/install.sh --lang zh       # 或 --lang en
 git clone https://github.com/carlos0xx/proxybox && cd proxybox
 docker compose up -d
 docker compose exec proxybox-admin \
-    sh -c 'grep -E "username|password|login_path" /etc/proxybox/config.yaml'
+    sh -c 'cat /etc/proxybox/admin.password; grep -E "username|login_path" /etc/proxybox/config.yaml'
 ```
 
 `bootstrap` 容器首次启动时生成 config。这个路径不带 fail2ban 和 HTTPS UI —— 生产环境请配 Caddy + 主机防火墙。
@@ -291,7 +291,7 @@ http://<你的-VPS>:8080/login/<12 位随机串>
 | 服务页某服务 "unknown" | 不在 `services.monitored` 或没装 (比如还没开 HTTPS 的 caddy —— 正常)。 |
 | HTTPS 启用报 `dns_mismatch` | 域名解析的不是这台 VPS。改 DNS A 记录后重试。 |
 | 流量页一直 0 但你在过墙 | worker 抓了第一拍但还没写桶。`journalctl -u proxybox-traffic-worker -n 20`。 |
-| 忘了登录地址 / 密码 | `ssh root@VPS` → `grep -E "username\|password\|login_path" /etc/proxybox/config.yaml`。 |
+| 忘了登录地址 / 密码 | `ssh root@VPS` → `cat /etc/proxybox/admin.password; grep -E "username\|login_path" /etc/proxybox/config.yaml`。 |
 
 后台的「日志」页有每个服务的实时 `journalctl -u` 输出。
 

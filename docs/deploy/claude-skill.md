@@ -53,7 +53,7 @@ The bundled `SKILL.md` carries instructions for:
 The skill explicitly instructs Claude to:
 
 1. **Echo the full login URL** (the URL-path token is one of two required factors — printing it alone doesn't leak access).
-2. **Echo the freshly generated `admin.password`** so the user can paste it into a password manager.
+2. **Echo the freshly generated admin password** (lives in `/etc/proxybox/admin.password`, mode 0400 — not in `config.yaml`) so the user can paste it into a password manager.
 3. **Never echo the bare `admin.token`** outside the login URL context. Don't quote it in commentary, don't write it to logs.
 
 The credentials live only on the VPS in `/etc/proxybox/config.yaml`. The skill never persists them locally.

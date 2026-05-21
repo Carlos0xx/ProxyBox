@@ -70,7 +70,7 @@ docker compose up -d
 Multi-arch images at `ghcr.io/carlos0xx/proxybox:latest`. No fail2ban or HTTPS UI on this path — pair with Caddy + a host firewall for production.
 
 > [!IMPORTANT]
-> The installer prints login URL + password **once**. Copy them into a password manager before closing the terminal — they are also stored in `/etc/proxybox/config.yaml`.
+> The installer prints login URL + password **once**. Copy them into a password manager before closing the terminal. Recovery via SSH: `cat /etc/proxybox/admin.password` (mode 0400) for the password, `/etc/proxybox/config.yaml` for the rest.
 
 ---
 

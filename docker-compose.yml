@@ -26,7 +26,10 @@ services:
       - singbox-config:/etc/sing-box
 
   sing-box:
-    image: ghcr.io/sagernet/sing-box:latest
+    # Pinned tag (not :latest) so Dependabot's docker ecosystem opens a
+    # PR on each upstream sing-box release rather than us silently
+    # picking up new releases on every `docker compose pull`.
+    image: ghcr.io/sagernet/sing-box:v1.13.12
     network_mode: host
     restart: unless-stopped
     depends_on:

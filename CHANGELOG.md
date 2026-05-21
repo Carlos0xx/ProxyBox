@@ -50,6 +50,35 @@ and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   returns `https://{domain}/login/{login_path}` when set, matching the
   rest of the post-install handoff.
 
+### Security — Codex audit follow-up #3 (post-merge tail)
+
+- **Login rate-limit on `/login/{secret}`.** A fourth speed bump in
+  front of password brute-force, on top of (1) the random URL suffix,
+  (2) the 16-char random password, and (3) constant-time compare.
+  After 5 failed attempts from one IP in a 15-minute window, each
+  subsequent failure adds an `asyncio.sleep` delay that doubles
+  (1 → 2 → 4 → 8 → 16 → 60 s cap). A successful login or 15 min of
+  no failures resets the counter. Per-IP keying respects
+  `X-Forwarded-For` from Caddy. New module
+  `app/services/login_rate_limit.py` + tests
+  `tests/test_login_rate_limit.py`.
+- **Docs aligned with v0.2.1 password file location.** README + 9
+  docs files were still saying "password is in `/etc/proxybox/config.yaml`"
+  even though v0.2.1 moved it to `/etc/proxybox/admin.password` (mode
+  0400). Every recovery snippet now points at the new file. Support
+  triage will no longer send users to the wrong path.
+- **Final inline `onclick` migrated to delegated handler.** The "复制
+  全部 URL" button at `static/index.html:4803` was the last hold-out
+  passing dynamic data through an inline onclick. Same pattern as the
+  rest of the audit-batch fixes: `data-base-url=` + delegated click
+  listener.
+- **Docker base images pinned.** `Dockerfile` was using floating
+  `python:3.13-slim-bookworm`; `docker-compose.yml` was pulling
+  `ghcr.io/sagernet/sing-box:latest`. Both now pin specific tags
+  (`python:3.13.13-slim-bookworm`, `sing-box:v1.13.12`) so the
+  build is reproducible and Dependabot's docker ecosystem opens a
+  PR on each upstream bump.
+
 ### Security — Codex audit follow-up #2 (the deferred items)
 
 - **Admin password moved out of `config.yaml`.** The password used to
