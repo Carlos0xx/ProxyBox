@@ -358,10 +358,9 @@ are generated on-the-fly from the same per-device row:
 | `/merlin.yaml`            | Clash + `tun:`  | AsusWRT-Merlin with Clash on the router (transparent proxy) |
 | `/shadowrocket.conf`      | Rules `.conf`   | Shadowrocket rules only; add node subscription first |
 
-If the user is in doubt on Shadowrocket, use `/shadowrocket.yaml` first. The
-URI list and rule profiles keep both VLESS and Hysteria2. If Hysteria2 times
-out while VLESS works, diagnose the UDP/QUIC path and the client core
-compatibility instead of hiding the Hysteria2 node from generated configs.
+If the user is in doubt on Shadowrocket, use `/shadowrocket.yaml` first. For
+ordinary URI-list clients, the default URL and `/sub.txt` alias remain the
+generic node subscription formats.
 
 ## Anti-patterns (do NOT do these)
 
