@@ -5,6 +5,19 @@ and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Security — Codex audit follow-up #4
+
+- **Forwarded-header trust restricted to local reverse proxies.** Login
+  rate-limit keying and HTTPS cookie detection now only honor
+  `X-Forwarded-For` / `X-Forwarded-Proto` when the socket peer is loopback.
+  Direct traffic to `:8080` can no longer spoof `X-Forwarded-For` to evade
+  per-IP backoff.
+- **Final credential-location drift cleaned up.** Login-page hints, the
+  passkey emergency text, install handoff text, and Claude deploy-skill
+  recovery snippets now consistently read the password from
+  `/etc/proxybox/admin.password`. The remaining UI token-rotation copy now
+  describes the 192-bit `sub_token`.
+
 ### Security — Codex audit follow-up
 
 - **Stored XSS hardening in the SPA.** Inline `onclick="fn('${escapeHtml(...)}')"`
@@ -20,12 +33,12 @@ and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Docker bootstrap now generates full admin credentials.** `app/bootstrap.py`
   previously only wrote `admin.token` to the freshly generated
   `config.yaml`, so with the default `features.url_token_bypass=false`
-  the login form had no password to compare against and Docker
-  installs were effectively locked out of the panel. Now generates
-  `admin.username` / `admin.password` (16-char alnum) / `admin.login_path`
-  (12-char alnum) and prints them in a single self-contained handoff
-  block to the bootstrap container's stdout — matches `install.sh`'s
-  behaviour.
+  the login form had no password to compare against and Docker installs
+  were effectively locked out of the panel. Now generates `admin.username`,
+  a 16-char alnum password in `/etc/proxybox/admin.password`, and
+  `admin.login_path` (12-char alnum), then prints them in a single
+  self-contained handoff block to the bootstrap container's stdout —
+  matches `install.sh`'s behaviour.
 - **`sub_token` entropy bumped 64 → 192 bits.** `secrets.token_hex(8)`
   (16 hex chars) replaced by `secrets.token_urlsafe(24)` (32 url-safe
   chars) in both `POST /api/devices/new` and `POST /devices/{name}/regen-subs`.
@@ -42,8 +55,8 @@ and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   format endpoints already had.
 - **Session cookie `Secure` flag now reflects request scheme.** Was
   hardcoded `secure=False`. Now `secure=True` when the request is
-  HTTPS (direct or via `X-Forwarded-Proto: https` from Caddy) and
-  `secure=False` otherwise. Bare-HTTP installs still work; HTTPS
+  HTTPS (direct or via trusted local `X-Forwarded-Proto: https` from Caddy)
+  and `secure=False` otherwise. Bare-HTTP installs still work; HTTPS
   installs no longer leak the session cookie over a downgrade.
 - **`POST /api/https/enable` returns the correct login URL.** Was
   hardcoded `https://{domain}/login`; now reads `admin.login_path` and
@@ -58,8 +71,8 @@ and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   After 5 failed attempts from one IP in a 15-minute window, each
   subsequent failure adds an `asyncio.sleep` delay that doubles
   (1 → 2 → 4 → 8 → 16 → 60 s cap). A successful login or 15 min of
-  no failures resets the counter. Per-IP keying respects
-  `X-Forwarded-For` from Caddy. New module
+  no failures resets the counter. Per-IP keying respects `X-Forwarded-For`
+  from local Caddy/nginx only. New module
   `app/services/login_rate_limit.py` + tests
   `tests/test_login_rate_limit.py`.
 - **Docs aligned with v0.2.1 password file location.** README + 9

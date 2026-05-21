@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import html
 import secrets
+from ipaddress import ip_address
 from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Form, HTTPException, Request
@@ -128,9 +129,9 @@ _STRINGS = {
         "btn_login": "登 录",
         "err_creds": "用户名或密码错误",
         "hint": (
-            "用户名 + 密码在 <code>install.sh</code> 安装结束时打印,也保存于"
-            " <code>/etc/proxybox/config.yaml</code> 的 <code>admin.username</code> /"
-            " <code>admin.password</code> 字段。"
+            "用户名 + 密码在 <code>install.sh</code> 安装结束时打印。用户名保存在"
+            " <code>/etc/proxybox/config.yaml</code> 的 <code>admin.username</code>,"
+            "密码保存在 <code>/etc/proxybox/admin.password</code>。"
         ),
     },
     "en": {
@@ -145,8 +146,9 @@ _STRINGS = {
         "err_creds": "Wrong username or password",
         "hint": (
             "Username + password were printed when <code>install.sh</code> finished;"
-            " they are also stored in <code>/etc/proxybox/config.yaml</code> under"
-            " <code>admin.username</code> / <code>admin.password</code>."
+            " the username is in <code>/etc/proxybox/config.yaml</code> under"
+            " <code>admin.username</code>, and the password is in"
+            " <code>/etc/proxybox/admin.password</code>."
         ),
     },
 }
@@ -256,32 +258,40 @@ async def login_page_secret(
     return _render(action=action, lang=chosen, set_cookie_lang=lang if lang else None)
 
 
-def _request_is_https(request: Request) -> bool:
-    """True if the inbound request is HTTPS — direct or behind a reverse proxy.
+def _trusted_forwarded_peer(request: Request) -> bool:
+    """Only loopback peers may supply X-Forwarded-* identity headers."""
+    host = request.client.host if request.client else ""
+    try:
+        return ip_address(host).is_loopback
+    except ValueError:
+        return False
 
-    Trusts ``X-Forwarded-Proto`` because Caddy / nginx set it for us and we
-    only ever listen on 127.0.0.1 in front of an external TLS terminator.
-    Falls back to ``request.url.scheme`` for the bare-HTTP development case.
-    """
-    fwd = request.headers.get("x-forwarded-proto", "").lower().split(",")[0].strip()
-    if fwd:
-        return fwd == "https"
+
+def _forwarded_first(request: Request, header: str) -> str:
+    value = request.headers.get(header, "")
+    return value.split(",", 1)[0].strip()
+
+
+def _request_is_https(request: Request) -> bool:
+    """True if the inbound request is HTTPS — direct or behind local Caddy/nginx."""
+    if _trusted_forwarded_peer(request):
+        fwd = _forwarded_first(request, "x-forwarded-proto").lower()
+        if fwd:
+            return fwd == "https"
     return request.url.scheme == "https"
 
 
 def _client_ip(request: Request) -> str:
     """Best-effort client IP for rate-limit keying.
 
-    Trusts ``X-Forwarded-For`` because Caddy / nginx terminate TLS in
-    front of uvicorn-on-127.0.0.1, so the raw ``request.client`` is
-    always the loopback address. If there's no proxy header we fall
-    through to the socket peer.
+    Only trusts ``X-Forwarded-For`` from loopback reverse proxies. Direct
+    requests to :8080 can otherwise spoof the header and bypass per-IP
+    login backoff.
     """
-    fwd = request.headers.get("x-forwarded-for", "")
-    if fwd:
+    if _trusted_forwarded_peer(request):
         # XFF is "client, proxy1, proxy2, ..." — first entry is the
         # originating client. Strip whitespace, ignore empties.
-        first = fwd.split(",", 1)[0].strip()
+        first = _forwarded_first(request, "x-forwarded-for")
         if first:
             return first
     return request.client.host if request.client else "unknown"

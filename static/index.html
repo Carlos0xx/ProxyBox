@@ -2256,7 +2256,7 @@ a:hover { color: var(--accent-hover); }
           <p><strong>注册:</strong>点上方"注册当前设备",系统会弹 Touch ID,确认后这台 Mac 的指纹就能登录后台了。iPhone 通过 iCloud Keychain 同步,Face ID 也能登。</p>
           <p><strong>登录:</strong>下次开后台直接访问 <code style="background:var(--bg-canvas);padding:1px 6px;border-radius:3px;">https://your-domain.com/admin/</code>(不带 token),会跳到登录页 → 自动弹 Touch ID。</p>
           <p><strong>登出:</strong>点上方"登出"清除 session,下次打开后台会重新要 Touch ID。</p>
-          <p><strong>应急:</strong>Passkey 私钥只在你 Mac / iPhone 的 Secure Enclave 里,服务器不存。两台设备都丢了 → 用 SSH 看 <code style="background:var(--bg-canvas);padding:1px 6px;border-radius:3px;">/etc/proxybox/config.yaml</code> 里的 admin.password,然后用旧 URL 进后台。</p>
+          <p><strong>应急:</strong>Passkey 私钥只在你 Mac / iPhone 的 Secure Enclave 里,服务器不存。两台设备都丢了 → 用 SSH 读取 <code style="background:var(--bg-canvas);padding:1px 6px;border-radius:3px;">/etc/proxybox/admin.password</code>,然后用旧 URL 进后台。</p>
         </div>
       </div>
 
@@ -3250,7 +3250,7 @@ const I18N_DICT = {
   '后续访问': 'Future access',
   '在每个客户端重新粘贴新 URL': 'Re-paste the new URL into every client',
   '该 IP 将被加入 ufw 防火墙拒绝列表,立即生效。': 'This IP will be added to ufw\'s deny list immediately.',
-  '生成新的 16 字符 sub_token': 'Generate a new 16-char sub_token',
+  '生成新的 192-bit sub_token': 'Generate a new 192-bit sub_token',
   '生成新的 12 字符随机后缀,': 'Generate a new 12-char random suffix; ',
   '旧目录删除, 新目录生成': 'Old directory removed, new one created',
   '客户端必须重新拉取订阅': 'Clients must re-fetch the subscription',
@@ -5089,7 +5089,7 @@ async function deleteDevicePrompt(name) {
 async function rotateDeviceToken(name) {
   const ok = await confirmDialog({
     title: `轮换 ${name} 的 URL Token?`,
-    body: `<strong style="color: var(--warn);">该设备的旧订阅 URL 立即失效</strong><br><br>会做:<br>• 生成新的 16 字符 sub_token<br>• 旧目录删除, 新目录生成<br>• 客户端必须重新拉取订阅<br><br>设备 sing-box UUID / 端口不变,只换 URL 前缀。`,
+    body: `<strong style="color: var(--warn);">该设备的旧订阅 URL 立即失效</strong><br><br>会做:<br>• 生成新的 192-bit sub_token<br>• 旧目录删除, 新目录生成<br>• 客户端必须重新拉取订阅<br><br>设备 sing-box UUID / 端口不变,只换 URL 前缀。`,
     type: 'warn', confirmText: '轮换 URL', confirmKind: 'warn'
   });
   if (!ok) return;

@@ -149,7 +149,7 @@ handoff block:
 
 **Do not re-mask the credentials in chat output for this skill.** The
 whole point of the one-shot UX is to avoid making普通用户 SSH back in
-to grep config.yaml. The install.sh output is the user's private channel
+to recover files manually. The install.sh output is the user's private channel
 (same as if they ran the installer locally) — relay it verbatim.
 
 This rule is **scoped to install.sh output and this Step 5 / Step 7
@@ -159,11 +159,12 @@ first 8 chars, because that's chat-only output that doesn't have the
 same one-shot UX constraint.
 
 If the user needs the credentials re-printed later (e.g. they lost the
-chat backscroll), this fetches them from the live config:
+chat backscroll), this fetches them from the live config and password file:
 
 ```bash
 ssh "$USER@$HOST" '
   /opt/proxybox/.venv/bin/python -c "
+from pathlib import Path
 import yaml
 c = yaml.safe_load(open(\"/etc/proxybox/config.yaml\"))
 a = c[\"admin\"]
@@ -174,7 +175,7 @@ path = a.get(\"login_path\", \"\")
 login_url = f\"{proto}://{host}{port}/login/{path}\" if path else f\"{proto}://{host}{port}/login\"
 print(f\"login URL: {login_url}\")
 print(f\"username:  {a[\\\"username\\\"]}\")
-print(f\"password:  {a[\\\"password\\\"]}\")
+print(f\"password:  {Path(\\\"/etc/proxybox/admin.password\\\").read_text().strip()}\")
 "
 '
 ```

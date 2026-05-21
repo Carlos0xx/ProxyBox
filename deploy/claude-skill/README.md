@@ -56,7 +56,7 @@ The skill instructs Claude to:
 2. Echo the **freshly generated admin password** (the new install wrote it to `/etc/proxybox/admin.password` mode 0400, not into `config.yaml`) so the user can paste it into a password manager.
 3. **Never echo the bare `admin.token`** outside the login URL context — no quoting it back in commentary, no writing it to logs.
 
-The credentials live only on the VPS in `/etc/proxybox/config.yaml`. The skill does not persist them locally.
+The credentials live only on the VPS: username/login path in `/etc/proxybox/config.yaml`, password in `/etc/proxybox/admin.password`. The skill does not persist them locally.
 
 > [!NOTE]
 > The handoff prints the password and login URL once. If the user closes the session before copying, they retrieve both via SSH:

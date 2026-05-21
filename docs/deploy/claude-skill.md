@@ -56,7 +56,7 @@ The skill explicitly instructs Claude to:
 2. **Echo the freshly generated admin password** (lives in `/etc/proxybox/admin.password`, mode 0400 — not in `config.yaml`) so the user can paste it into a password manager.
 3. **Never echo the bare `admin.token`** outside the login URL context. Don't quote it in commentary, don't write it to logs.
 
-The credentials live only on the VPS in `/etc/proxybox/config.yaml`. The skill never persists them locally.
+The credentials live only on the VPS: username/login path in `/etc/proxybox/config.yaml`, password in `/etc/proxybox/admin.password`. The skill never persists them locally.
 
 > [!IMPORTANT]
 > The skill assumes you trust your local Claude Code session. If you'd rather Claude never see the credentials, run `install.sh` over SSH yourself — the skill is a convenience, not a hard requirement.
