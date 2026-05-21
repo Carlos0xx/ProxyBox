@@ -52,13 +52,15 @@ SSH=(
   -o UpdateHostKeys=no
   -o LogLevel=ERROR
 )
+REMOTE_INSTALL_DIR="/opt/proxybox-$(date +%Y%m%d-%H%M%S)-$RANDOM"
 ```
 
 ### Step 1 — Minimal host pre-flight
 
 For the **first** SSH after the user gave us VPS credentials, do a minimal
 in-line check first. The repo may not exist yet, so do not try to run
-repo scripts until after Step 2 has cloned or updated the source.
+repo scripts until after Step 2 has cloned the source into a new install
+directory.
 
 ```bash
 "${SSH[@]}" "$USER@$HOST" bash -s <<'EOF'
@@ -77,17 +79,21 @@ Bail out if any of:
 - RAM < 512 MB
 - `[priv]` is `no-sudo`
 
-### Step 2 — Get the source onto the VPS
+### Step 2 — Clone into a new install directory
 
 A minimal Debian image typically ships *without* `git` or `curl`, so
 preamble the clone with an apt install. Docker itself is checked and installed
 by `deploy/docker-install.sh` in Step 4. The package list is small and
-idempotent — re-running it on a fully-provisioned host is a no-op. Existing
-checkouts must be updated from `origin/main` explicitly so a stale
-`/opt/proxybox` cannot keep serving an old installer.
+idempotent — re-running it on a fully-provisioned host is a no-op.
+
+Every install must clone into a brand-new directory such as
+`/opt/proxybox-20260522-131500-12345`. Do not update, overwrite, delete, move,
+or reuse `/opt/proxybox` or any other existing path. If the generated path
+already exists, fail and choose a different `REMOTE_INSTALL_DIR`; never touch
+the existing directory.
 
 ```bash
-"${SSH[@]}" "$USER@$HOST" '
+"${SSH[@]}" "$USER@$HOST" "REMOTE_INSTALL_DIR='$REMOTE_INSTALL_DIR' bash -s" <<'EOF'
   set -e
   SUDO=""
   if [ "$(id -u)" != "0" ]; then SUDO="sudo"; fi
@@ -96,38 +102,32 @@ checkouts must be updated from `origin/main` explicitly so a stale
   $SUDO apt-get update -qq
   $SUDO apt-get install -y -qq git curl ca-certificates
 
-  if [ -d /opt/proxybox/.git ]; then
-    $SUDO git -C /opt/proxybox remote set-url origin https://github.com/carlos0xx/proxybox
-    $SUDO git -C /opt/proxybox fetch --prune origin main
-    if $SUDO git -C /opt/proxybox show-ref --verify --quiet refs/heads/main; then
-      $SUDO git -C /opt/proxybox checkout main
-    else
-      $SUDO git -C /opt/proxybox checkout -b main --track origin/main
-    fi
-    $SUDO git -C /opt/proxybox pull --ff-only origin main
-  elif [ -d /opt/proxybox ] && [ -n "$(ls -A /opt/proxybox 2>/dev/null)" ]; then
-    echo "[skip] /opt/proxybox exists but is not a git checkout — leaving it alone"
-    echo "       remove or move /opt/proxybox, then re-run; Docker fresh mode handles runtime state"
+  if [ -z "${REMOTE_INSTALL_DIR:-}" ]; then
+    echo "[error] REMOTE_INSTALL_DIR is empty"
     exit 1
-  else
-    $SUDO git clone https://github.com/carlos0xx/proxybox /opt/proxybox
   fi
-'
+  if [ -e "$REMOTE_INSTALL_DIR" ]; then
+    echo "[error] install dir already exists; refusing to touch it: $REMOTE_INSTALL_DIR"
+    exit 1
+  fi
+
+  $SUDO git clone https://github.com/carlos0xx/proxybox "$REMOTE_INSTALL_DIR"
+  echo "[install-dir] $REMOTE_INSTALL_DIR"
+EOF
 ```
 
 ### Step 3 — Docker pre-flight
 
-Now that `/opt/proxybox` exists, do only a lightweight host probe. Do not run
-the native `check-prereqs.sh` for the default Docker path; that script is for
-the host-systemd installer. Missing Docker / Compose / daemon startup is
-handled by `deploy/docker-install.sh` in the next step.
+Now that the fresh install directory exists, do only a lightweight host probe.
+Do not run the native `check-prereqs.sh` for the default Docker path; that
+script is for the host-systemd installer. Missing Docker / Compose / daemon
+startup is handled by `deploy/docker-install.sh` in the next step.
 
 ```bash
-"${SSH[@]}" "$USER@$HOST" '
-  cd /opt/proxybox
+"${SSH[@]}" "$USER@$HOST" "cd '$REMOTE_INSTALL_DIR' && bash -s" <<'EOF'
   ss -H -ltn >/dev/null 2>&1 || true
   ss -H -lun >/dev/null 2>&1 || true
-'
+EOF
 ```
 
 If this basic probe fails, paste the error back to the user and stop.
@@ -135,28 +135,25 @@ If this basic probe fails, paste the error back to the user and stop.
 ### Step 4 — Run Docker installer
 
 ```bash
-"${SSH[@]}" "$USER@$HOST" '
-  cd /opt/proxybox
+"${SSH[@]}" "$USER@$HOST" "cd '$REMOTE_INSTALL_DIR' && bash -s" <<'EOF'
   bash deploy/docker-install.sh
-'
+EOF
 ```
 
 `deploy/docker-install.sh` checks Docker, installs Docker / Compose if
 missing, starts the Docker service, scans host ports, and writes `.env`.
 Each installer run creates a new Compose project name and new Docker volumes.
 It must not stop, delete, or rewrite any older ProxyBox project or unrelated
-host service. If the user explicitly asks to upgrade the current project in
-place, use `PROXYBOX_UPGRADE=1 bash deploy/docker-install.sh`.
+host service.
 
 ### Step 5 — Verify
 
 ```bash
-"${SSH[@]}" "$USER@$HOST" '
-  cd /opt/proxybox
+"${SSH[@]}" "$USER@$HOST" "cd '$REMOTE_INSTALL_DIR' && bash -s" <<'EOF'
   docker compose ps
   docker compose logs --tail=80 bootstrap
   docker compose logs --tail=80 sing-box proxybox-admin proxybox-traffic-worker
-'
+EOF
 ```
 
 The three core long-running services should be `Up`: `sing-box`,
@@ -182,13 +179,12 @@ If the user needs the credentials re-printed later, this fetches them from the
 live Docker volume:
 
 ```bash
-"${SSH[@]}" "$USER@$HOST" '
-  cd /opt/proxybox
+"${SSH[@]}" "$USER@$HOST" "cd '$REMOTE_INSTALL_DIR' && bash -s" <<'EOF'
   docker compose exec proxybox-admin sh -c "
     echo password: \$(cat /etc/proxybox/admin.password)
     grep -E \"username|login_path|port:\" /etc/proxybox/config.yaml
   "
-'
+EOF
 ```
 
 ### Step 7 — Optional: Telegram bot
@@ -197,7 +193,7 @@ Only do this if the user explicitly provided bot credentials.
 
 ```bash
 "${SSH[@]}" "$USER@$HOST" "
-cd /opt/proxybox
+cd '$REMOTE_INSTALL_DIR'
 ADMIN_TOKEN=\$(docker compose exec -T proxybox-admin python - <<'PY'
 import yaml
 print(yaml.safe_load(open('/etc/proxybox/config.yaml'))['admin']['token'])
@@ -272,8 +268,9 @@ handoff. v0.1.6+ exposes a lot in the panel:
   设备管理 → device → 📋 订阅 URL. The 复制 button works on plain
   HTTP too (v0.1.12 patched the textarea fallback that newer browsers
   refused). If a user reports "复制按钮没反应", they're on a SPA
-  shipped before v0.1.12 — `git pull` in `/opt/proxybox` then
-  `docker compose up -d --build proxybox-admin` to upgrade Docker installs.
+  shipped before v0.1.12. For a new install, clone the latest code into a
+  fresh directory and install there. Do not run `git pull` inside a VPS path
+  unless the user explicitly names that exact install as the one to upgrade.
 - **Live throughput + per-device history:** 总览 / 设备历史 / 总流量.
   Host categorisation populates within ~10 s of any client browsing
   (v0.1.9 default-on).
@@ -307,6 +304,11 @@ phones and laptops — Clash YAML is mainly for routers and Stash power-users.
   and must not touch any user data, files, services, containers, or volumes
   outside this install. On conflicts, pick different ports, create a new
   isolated instance, or fail clearly.
+- **Never update an existing checkout during an install.** No `git -C`, no
+  `git pull`, no branch checkout, no reuse of an old `.env`, and no reuse of
+  existing Docker volumes. Even if `/opt/proxybox` already exists and looks
+  like this repo, leave it alone and clone into a new
+  `/opt/proxybox-<timestamp>-<suffix>` directory.
 - **The Docker bootstrap output IS the user's handoff** — relay it verbatim
   including the login URL + username + password (bold red in the
   summary). Re-masking defeats v0.1.6+'s one-shot UX. But ad-hoc bash
@@ -323,8 +325,8 @@ phones and laptops — Clash YAML is mainly for routers and Stash power-users.
 - **Never** commit the generated `config.yaml`, `bot.env`, or `session-secret`
   to any git repository
 - **Never** delete or stop older ProxyBox containers/volumes just because this
-  install is being re-run. New installs create a new Compose project; upgrades
-  require explicit `PROXYBOX_UPGRADE=1`.
+  install is being re-run. New installs create a new Compose project in the new
+  source directory and leave older projects alone.
 
 ## Reporting failures
 

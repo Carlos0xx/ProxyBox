@@ -81,7 +81,7 @@ def test_installer_rewrites_managed_systemd_units() -> None:
     assert "[ ! -f /etc/systemd/system/sing-box.service ]" not in INSTALL_SH
     assert "[ ! -f /etc/systemd/system/proxybox-admin.service ]" not in INSTALL_SH
     assert 'install -m 644 "$src" "$dst"' in INSTALL_SH
-    assert "systemctl restart \"$svc\"" in INSTALL_SH
+    assert 'systemctl restart "$svc"' in INSTALL_SH
 
 
 def test_docker_bootstrap_supports_fresh_mode_for_named_volumes() -> None:
@@ -90,14 +90,23 @@ def test_docker_bootstrap_supports_fresh_mode_for_named_volumes() -> None:
     assert "proxybox-sub:/var/www/proxybox-sub" in DOCKER_COMPOSE
 
 
-def test_deploy_skill_updates_existing_checkout_from_origin_main() -> None:
-    assert "git -C /opt/proxybox fetch --prune origin main" in DEPLOY_SKILL
-    assert "git -C /opt/proxybox pull --ff-only origin main" in DEPLOY_SKILL
+def test_deploy_skill_clones_new_directory_without_reusing_checkout() -> None:
+    assert "REMOTE_INSTALL_DIR" in DEPLOY_SKILL
+    assert 'REMOTE_INSTALL_DIR="/opt/proxybox-$(date +%Y%m%d-%H%M%S)-$RANDOM"' in DEPLOY_SKILL
+    assert 'git clone https://github.com/carlos0xx/proxybox "$REMOTE_INSTALL_DIR"' in DEPLOY_SKILL
+    assert "git -C /opt/proxybox" not in DEPLOY_SKILL
+    assert "fetch --prune" not in DEPLOY_SKILL
+    assert "pull --ff-only" not in DEPLOY_SKILL
+    assert "checkout main" not in DEPLOY_SKILL
+    assert "remove or move /opt/proxybox" not in DEPLOY_SKILL
+    assert "PROXYBOX_UPGRADE=1" not in DEPLOY_SKILL
+    assert "no reuse of an old `.env`" in DEPLOY_SKILL
+    assert "existing Docker volumes" in DEPLOY_SKILL
     assert "bash deploy/docker-install.sh" in DEPLOY_SKILL
     assert "installs Docker / Compose" in DEPLOY_SKILL
     assert "deploy/check-prereqs.sh --install --lang $LANG_FLAG" not in DEPLOY_SKILL
     assert "deploy/install.sh --fresh --lang $LANG_FLAG" not in DEPLOY_SKILL
-    assert "exists but is not a git checkout" in DEPLOY_SKILL
+    assert "install dir already exists; refusing to touch it" in DEPLOY_SKILL
     assert "exit 1" in DEPLOY_SKILL
 
 
@@ -117,3 +126,4 @@ def test_deploy_skill_enforces_vps_data_red_line() -> None:
     assert "Installation red line:" in DEPLOY_SKILL
     assert "never delete files or services on the user's VPS" in DEPLOY_SKILL
     assert "must not touch any user data, files, services, containers, or volumes" in DEPLOY_SKILL
+    assert "Never update an existing checkout during an install" in DEPLOY_SKILL

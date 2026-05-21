@@ -41,8 +41,9 @@
 ```bash
 ssh root@<你的-vps>
 apt-get update && apt-get install -y git curl ca-certificates
-git clone https://github.com/carlos0xx/proxybox /opt/proxybox
-cd /opt/proxybox && bash deploy/install.sh
+INSTALL_DIR="/opt/proxybox-$(date +%Y%m%d-%H%M%S)-$$"
+git clone https://github.com/carlos0xx/proxybox "$INSTALL_DIR"
+cd "$INSTALL_DIR" && bash deploy/install.sh
 ```
 
 无参数运行 `deploy/install.sh` 会用中文提示选择 **Docker 安装** 或 **宿主机安装**。默认回车选择 Docker:容器隔离、自动避开已占用端口、不写宿主机 systemd/fail2ban/Caddy。如果 VPS 里已经有其他服务、网站、面板或生产系统,强烈推荐 Docker。宿主机安装会直接安装 Python、sing-box、systemd unit、fail2ban,仅建议用于干净、专用、不跑其他生产服务的 VPS。
@@ -57,15 +58,9 @@ bash deploy/install.sh --native --fresh --lang zh
 Docker 安装会在缺失时自动安装/启动 Docker、Compose 和端口检测工具,然后扫描宿主机端口:默认端口没被占用就用默认值,被占用就自动挑一组空闲端口并打印/写入 `.env`。每次运行都会生成新的 Compose project name 和新的 Docker volumes,所以管理路径、密码、密钥、订阅地址都会重新生成,同时不会删除任何旧 ProxyBox 项目。
 
 > [!IMPORTANT]
-> 安装红线: 不要删除用户 VPS 上任何文件和服务。安装器和部署代理只能碰本次安装新建的 ProxyBox 资源,绝不能碰本次安装以外任何用户数据、文件、服务、容器或 volume。遇到冲突只能自动换端口、新建隔离实例,或明确报错。
+> 安装红线: 不要删除、修改、覆盖或复用用户 VPS 上本次安装以外的任何文件和服务。即便宿主机已经存在 `/opt/proxybox` 或同名目录,也必须保留不动,改用新的 `proxybox-<时间戳>-<后缀>` 目录克隆和安装;安装器和部署代理只能碰本次安装新建的资源。
 
-如果是要原地升级当前项目,而不是新建一套:
-
-```bash
-cd /opt/proxybox
-git pull
-PROXYBOX_UPGRADE=1 bash deploy/docker-install.sh
-```
+升级不是安装。只有你明确选中某个已有 ProxyBox 安装目录时,才允许原地升级;普通安装流程永远新建目录和新的隔离 Docker project。
 
 ### 方式 B · Claude Code / Codex
 
@@ -76,7 +71,7 @@ mkdir -p ~/.claude/skills/proxybox-deploy
 cp -r deploy/claude-skill/* ~/.claude/skills/proxybox-deploy/
 ```
 
-然后在对话里:*"帮我在 1.2.3.4 这台 VPS 上部署 proxybox,SSH key 是 ~/.ssh/id_ed25519"*。代理走自动删除的临时 SSH `known_hosts` → 最小 VPS 检查 → `git clone` / 更新 → Docker 端口预检 → `deploy/docker-install.sh` → 验证服务 → 把登录地址 + 凭据发给你。
+然后在对话里:*"帮我在 1.2.3.4 这台 VPS 上部署 proxybox,SSH key 是 ~/.ssh/id_ed25519"*。代理走自动删除的临时 SSH `known_hosts` → 最小 VPS 检查 → 克隆到新的安装目录 → Docker 端口预检 → `deploy/docker-install.sh` → 验证服务 → 把登录地址 + 凭据发给你。
 
 Codex 或其他代理:直接把 [`deploy/claude-skill/SKILL.md`](./deploy/claude-skill/SKILL.md) 喂给它 —— 指令是通用的,不绑 Claude Code。
 
@@ -85,14 +80,15 @@ Codex 或其他代理:直接把 [`deploy/claude-skill/SKILL.md`](./deploy/claude
 ```bash
 ssh root@<你的-vps>
 apt-get update && apt-get install -y git curl ca-certificates
-git clone https://github.com/carlos0xx/proxybox /opt/proxybox
-cd /opt/proxybox && bash deploy/install.sh --native --fresh --lang zh
+INSTALL_DIR="/opt/proxybox-$(date +%Y%m%d-%H%M%S)-$$"
+git clone https://github.com/carlos0xx/proxybox "$INSTALL_DIR"
+cd "$INSTALL_DIR" && bash deploy/install.sh --native --fresh --lang zh
 ```
 
 fresh 模式会先清理 ProxyBox 自己管理的旧配置、旧数据、旧订阅和旧服务文件,再生成新的 Reality 密钥对、Hy2 证书、16 位随机 admin 密码和 5 位小写随机设备名。只有明确要保留旧 ProxyBox 安装时才去掉 `--fresh`。
 
 > [!IMPORTANT]
-> 安装器**只打印一次**登录地址 + 密码。关闭终端前抄进密码管理器。Docker 找回:`cd /opt/proxybox && docker compose exec proxybox-admin sh -c 'cat /etc/proxybox/admin.password; grep -E "username|login_path" /etc/proxybox/config.yaml'`。
+> 安装器**只打印一次**登录地址 + 密码。关闭终端前抄进密码管理器。Docker 找回:`cd <proxybox-安装目录> && docker compose exec proxybox-admin sh -c 'cat /etc/proxybox/admin.password; grep -E "username|login_path" /etc/proxybox/config.yaml'`。
 
 ---
 

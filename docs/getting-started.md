@@ -23,23 +23,18 @@ For a higher-level walkthrough of day-to-day operations after install, see [`gui
 ```bash
 ssh root@<your-vps>
 apt-get update && apt-get install -y git curl ca-certificates
-git clone https://github.com/carlos0xx/proxybox /opt/proxybox
-cd /opt/proxybox
+INSTALL_DIR="/opt/proxybox-$(date +%Y%m%d-%H%M%S)-$$"
+git clone https://github.com/carlos0xx/proxybox "$INSTALL_DIR"
+cd "$INSTALL_DIR"
 bash deploy/install.sh
 ```
 
 `deploy/install.sh` shows a Chinese mode picker. Press Enter for Docker, which checks Docker/Compose and `ss`/`iproute2`, installs missing runtime packages, starts Docker, scans host ports, writes `.env`, and starts an isolated bridge-network stack. Use Docker if the VPS already runs websites, panels, or production services. Native install writes Python, sing-box, systemd units, and fail2ban directly to the host; only use it on a clean dedicated VPS.
 
 > [!IMPORTANT]
-> Installation red line: never delete files or services on the user's VPS. Installers and deploy agents may only touch ProxyBox resources created for this install, and must not touch any user data, files, services, containers, or volumes outside this install. On conflicts, pick different ports, create a new isolated instance, or fail clearly.
+> Installation red line: never delete, modify, overwrite, or reuse files/services on the user's VPS outside this install. Even if `/opt/proxybox` or another same-name directory already exists, leave it untouched, clone into a new `proxybox-<timestamp>-<suffix>` directory, and only touch resources created for this run.
 
-To upgrade the current project in place instead of creating a fresh project:
-
-```bash
-cd /opt/proxybox
-git pull
-PROXYBOX_UPGRADE=1 bash deploy/docker-install.sh
-```
+Upgrades are not installs. Only run an in-place upgrade when you explicitly choose the exact existing ProxyBox install directory; the normal install flow always creates a new directory and a new isolated Docker project.
 
 Full reference: [`deploy/docker.md`](./deploy/docker.md).
 
@@ -60,7 +55,7 @@ Then in any session:
 
 > deploy proxybox on my VPS at 1.2.3.4 using ~/.ssh/id_ed25519
 
-The agent uses an auto-deleted temporary SSH `known_hosts`, runs a minimal VPS check, clones or updates the repo on the VPS, runs the Docker port pre-flight, executes `deploy/docker-install.sh`, verifies the core services, and relays the **login URL, username, password, and first device status** back to you.
+The agent uses an auto-deleted temporary SSH `known_hosts`, runs a minimal VPS check, clones the repo into a fresh per-install directory on the VPS, runs the Docker port pre-flight, executes `deploy/docker-install.sh`, verifies the core services, and relays the **login URL, username, password, and first device status** back to you.
 
 For **Codex** or other coding agents, point them at [`deploy/claude-skill/SKILL.md`](../deploy/claude-skill/SKILL.md) — the instructions are framework-agnostic.
 
@@ -73,8 +68,9 @@ Full reference: [`deploy/claude-skill.md`](./deploy/claude-skill.md).
 ```bash
 ssh root@<your-vps>
 apt-get update && apt-get install -y git curl ca-certificates
-git clone https://github.com/carlos0xx/proxybox /opt/proxybox
-cd /opt/proxybox
+INSTALL_DIR="/opt/proxybox-$(date +%Y%m%d-%H%M%S)-$$"
+git clone https://github.com/carlos0xx/proxybox "$INSTALL_DIR"
+cd "$INSTALL_DIR"
 bash deploy/install.sh --native --fresh --lang en        # --lang zh for Chinese output
 ```
 

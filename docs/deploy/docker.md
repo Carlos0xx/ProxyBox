@@ -3,15 +3,16 @@
 > 推荐路径。Docker stack 使用 bridge 网络隔离,自动挑选空闲宿主端口,不写宿主机 Python、systemd、fail2ban、Caddy 或 SSH known_hosts。
 
 > [!IMPORTANT]
-> 安装红线: 不要删除用户 VPS 上任何文件和服务。安装器和部署代理只能碰本次安装新建的 ProxyBox 资源,绝不能碰本次安装以外任何用户数据、文件、服务、容器或 volume。遇到冲突只能自动换端口、新建隔离实例,或明确报错。
+> 安装红线: 不要删除、修改、覆盖或复用用户 VPS 上本次安装以外的任何文件和服务。即便宿主机已经存在 `/opt/proxybox` 或同名目录,也必须保留不动,改用新的 `proxybox-<时间戳>-<后缀>` 目录克隆和安装;安装器和部署代理只能碰本次安装新建的资源。
 
 ## 快速开始
 
 ```bash
 ssh root@<your-vps>
 apt-get update && apt-get install -y git curl ca-certificates
-git clone https://github.com/carlos0xx/proxybox /opt/proxybox
-cd /opt/proxybox
+INSTALL_DIR="/opt/proxybox-$(date +%Y%m%d-%H%M%S)-$$"
+git clone https://github.com/carlos0xx/proxybox "$INSTALL_DIR"
+cd "$INSTALL_DIR"
 bash deploy/docker-install.sh
 ```
 
@@ -25,12 +26,9 @@ bash deploy/docker-install.sh
 | 启动 stack | `docker compose up -d --build`,使用 bridge network + 显式 published ports。 |
 | 首台设备 | 如果设备列表为空,自动创建 5 个小写字母的随机设备名。`PROXYBOX_FIRST_DEVICE=` 可跳过。 |
 
-每次运行安装器默认都会新建一套 Compose project 和 Docker volumes。它不会 `down`、删除或改写旧 ProxyBox project；旧项目如果还在运行,只会被端口扫描识别为“端口已占用”,新项目会自动选择其他端口。需要原地升级当前 `.env` 指向的项目时,显式使用:
+每次运行安装器默认都会新建一套 Compose project 和 Docker volumes。它不会 `down`、删除或改写旧 ProxyBox project；旧项目如果还在运行,只会被端口扫描识别为“端口已占用”,新项目会自动选择其他端口。
 
-```bash
-git pull
-PROXYBOX_UPGRADE=1 bash deploy/docker-install.sh
-```
+升级不是安装。只有你明确选中某个已有 ProxyBox 安装目录时,才允许原地升级；普通安装流程永远新建目录和新的隔离 Docker project。
 
 ## 端口策略
 
@@ -83,7 +81,7 @@ Docker 模式下,后台不会调用宿主 `systemctl` 来控制服务:
 
 默认重新运行 `bash deploy/docker-install.sh` 是“新装”:生成新的 Compose project、新的 volume、新的端口选择、新的登录地址和订阅地址,不删除旧项目。
 
-如果只是升级当前项目的代码和镜像,使用 `PROXYBOX_UPGRADE=1 bash deploy/docker-install.sh`。升级模式会复用当前 `.env` 指向的 Compose project。
+如果只是升级当前项目的代码和镜像,必须先进入你明确要升级的那个安装目录,再使用升级模式。升级模式会复用当前目录 `.env` 指向的 Compose project；新安装流程不能使用这个模式。
 
 ## HTTPS 与 fail2ban
 

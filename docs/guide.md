@@ -50,14 +50,15 @@ It accounts traffic per device, classifies destination hosts (Video / Social / A
 ```bash
 ssh root@<your-vps>
 apt-get update && apt-get install -y git curl ca-certificates
-git clone https://github.com/carlos0xx/proxybox /opt/proxybox
-cd /opt/proxybox
+INSTALL_DIR="/opt/proxybox-$(date +%Y%m%d-%H%M%S)-$$"
+git clone https://github.com/carlos0xx/proxybox "$INSTALL_DIR"
+cd "$INSTALL_DIR"
 bash deploy/install.sh
 ```
 
 The installer shows a Chinese mode picker. Press Enter for Docker, which checks Docker/Compose and `ss`/`iproute2`, installs missing runtime packages, starts Docker, scans host ports, prints/writes a fresh isolated Compose project to `.env`, and starts a bridge-network stack. If the VPS already runs websites, panels, or production services, choose Docker. Native install writes Python, sing-box, systemd units, and fail2ban directly to the host; only use it on a clean dedicated VPS.
 
-> **Installation red line:** never delete files or services on the user's VPS. Installers and deploy agents may only touch ProxyBox resources created for this install, and must not touch any user data, files, services, containers, or volumes outside this install.
+> **Installation red line:** never delete, modify, overwrite, or reuse files/services on the user's VPS outside this install. Even if `/opt/proxybox` or another same-name directory already exists, leave it untouched and clone into a new `proxybox-<timestamp>-<suffix>` directory.
 
 #### Path B — Claude Code / Codex
 
@@ -72,15 +73,16 @@ Then ask in any session:
 
 > deploy proxybox on my VPS at 1.2.3.4 using ~/.ssh/id_ed25519
 
-The agent walks auto-deleted temporary SSH `known_hosts` → minimal VPS check → `git clone` / update → Docker port pre-flight → `deploy/docker-install.sh` → verification → relays the credentials back. For Codex or other agents, point them at [`deploy/claude-skill/SKILL.md`](../deploy/claude-skill/SKILL.md) directly.
+The agent walks auto-deleted temporary SSH `known_hosts` → minimal VPS check → clone into a fresh install directory → Docker port pre-flight → `deploy/docker-install.sh` → verification → relays the credentials back. For Codex or other agents, point them at [`deploy/claude-skill/SKILL.md`](../deploy/claude-skill/SKILL.md) directly.
 
 #### Path C — `install.sh`
 
 ```bash
 ssh root@<your-vps>
 apt-get update && apt-get install -y git curl ca-certificates
-git clone https://github.com/carlos0xx/proxybox /opt/proxybox
-cd /opt/proxybox
+INSTALL_DIR="/opt/proxybox-$(date +%Y%m%d-%H%M%S)-$$"
+git clone https://github.com/carlos0xx/proxybox "$INSTALL_DIR"
+cd "$INSTALL_DIR"
 bash deploy/install.sh --native --fresh --lang en       # or --lang zh
 ```
 
@@ -142,11 +144,11 @@ Mostly from the panel. Docker installs should handle HTTPS with an external reve
 | Symptom | Try this |
 | --- | --- |
 | Every page says "refresh failed" | Hard refresh (Cmd+Shift+R / Ctrl+F5). v0.1.6+ sends `Cache-Control: no-store` so fresh installs shouldn't hit this. |
-| Copy button does nothing | Pre-v0.1.12 SPA. `cd /opt/proxybox && git pull && docker compose up -d --build proxybox-admin`. |
+| Copy button does nothing | Pre-v0.1.12 SPA. For new installs, clone the latest code into a new install directory. Upgrade only if you explicitly choose the existing install directory. |
 | Service shows "unknown" on Services page | Not in `services.monitored` or not installed (e.g. `caddy` before HTTPS is on — normal). |
 | HTTPS provisioning → `dns_mismatch` | Your domain doesn't resolve to this VPS. Update the A record and retry. |
-| Traffic page shows 0 while browsing | The worker took its first sample but no buckets are flushed yet. Check `cd /opt/proxybox && docker compose logs --tail=80 proxybox-traffic-worker`. |
-| Forgot login URL or password | `cd /opt/proxybox && docker compose exec proxybox-admin sh -c 'cat /etc/proxybox/admin.password; grep -E "username\|login_path" /etc/proxybox/config.yaml'`. |
+| Traffic page shows 0 while browsing | The worker took its first sample but no buckets are flushed yet. Check `cd <proxybox-install-dir> && docker compose logs --tail=80 proxybox-traffic-worker`. |
+| Forgot login URL or password | `cd <proxybox-install-dir> && docker compose exec proxybox-admin sh -c 'cat /etc/proxybox/admin.password; grep -E "username\|login_path" /etc/proxybox/config.yaml'`. |
 
 Logs for Docker services are available with `docker compose logs`.
 
@@ -200,14 +202,15 @@ ProxyBox 是跑在单台 VPS 上的 sing-box 管理后台。给**每台设备独
 ```bash
 ssh root@<你的-vps>
 apt-get update && apt-get install -y git curl ca-certificates
-git clone https://github.com/carlos0xx/proxybox /opt/proxybox
-cd /opt/proxybox
+INSTALL_DIR="/opt/proxybox-$(date +%Y%m%d-%H%M%S)-$$"
+git clone https://github.com/carlos0xx/proxybox "$INSTALL_DIR"
+cd "$INSTALL_DIR"
 bash deploy/install.sh
 ```
 
 安装器会用中文提示选择 Docker 或宿主机。直接回车默认 Docker:容器隔离、自动避开已占用端口、不写宿主机 systemd/fail2ban/Caddy。如果 VPS 已经跑了其他服务、网站、面板或生产系统,强烈推荐 Docker。宿主机安装会直接安装 Python、sing-box、systemd unit、fail2ban,仅建议用于干净、专用、不跑其他生产服务的 VPS。
 
-> **安装红线:** 不要删除用户 VPS 上任何文件和服务。安装器和部署代理只能碰本次安装新建的 ProxyBox 资源,绝不能碰本次安装以外任何用户数据、文件、服务、容器或 volume。
+> **安装红线:** 不要删除、修改、覆盖或复用用户 VPS 上本次安装以外的任何文件和服务。即便宿主机已经存在 `/opt/proxybox` 或同名目录,也必须保留不动,改用新的 `proxybox-<时间戳>-<后缀>` 目录。
 
 #### 方式 B — Claude Code / Codex
 
@@ -222,15 +225,16 @@ cp -r deploy/claude-skill/* ~/.claude/skills/proxybox-deploy/
 
 > 帮我在 1.2.3.4 这台 VPS 上部署 proxybox,SSH key 是 ~/.ssh/id_ed25519
 
-代理走自动删除的临时 SSH `known_hosts` → 最小 VPS 检查 → `git clone` / 更新 → Docker 端口预检 → `deploy/docker-install.sh` → 验证服务 → 把凭据发给你。Codex 或其他代理:直接把 [`deploy/claude-skill/SKILL.md`](../deploy/claude-skill/SKILL.md) 喂给它即可。
+代理走自动删除的临时 SSH `known_hosts` → 最小 VPS 检查 → 克隆到新的安装目录 → Docker 端口预检 → `deploy/docker-install.sh` → 验证服务 → 把凭据发给你。Codex 或其他代理:直接把 [`deploy/claude-skill/SKILL.md`](../deploy/claude-skill/SKILL.md) 喂给它即可。
 
 #### 方式 C — `install.sh`
 
 ```bash
 ssh root@<你的-vps>
 apt-get update && apt-get install -y git curl ca-certificates
-git clone https://github.com/carlos0xx/proxybox /opt/proxybox
-cd /opt/proxybox
+INSTALL_DIR="/opt/proxybox-$(date +%Y%m%d-%H%M%S)-$$"
+git clone https://github.com/carlos0xx/proxybox "$INSTALL_DIR"
+cd "$INSTALL_DIR"
 bash deploy/install.sh --native --fresh --lang zh       # 或 --lang en
 ```
 
@@ -289,11 +293,11 @@ http://<你的-VPS>:<admin-port>/login/<12 位随机串>
 | 现象 | 试试 |
 | --- | --- |
 | 每页报 "刷新失败" | 硬刷新 (Cmd+Shift+R / Ctrl+F5)。v0.1.6+ 加了 `Cache-Control: no-store`,新装实例不该出。 |
-| "复制" 按钮没反应 | v0.1.12 之前的 SPA。`cd /opt/proxybox && git pull && docker compose up -d --build proxybox-admin`。 |
+| "复制" 按钮没反应 | v0.1.12 之前的 SPA。新安装就克隆最新代码到新目录;只有明确选中已有安装目录时才原地升级。 |
 | 服务页某服务 "unknown" | 不在 `services.monitored` 或没装 (比如还没开 HTTPS 的 caddy —— 正常)。 |
 | HTTPS 启用报 `dns_mismatch` | 域名解析的不是这台 VPS。改 DNS A 记录后重试。 |
-| 流量页一直 0 但你在过墙 | worker 抓了第一拍但还没写桶。`cd /opt/proxybox && docker compose logs --tail=80 proxybox-traffic-worker`。 |
-| 忘了登录地址 / 密码 | `cd /opt/proxybox && docker compose exec proxybox-admin sh -c 'cat /etc/proxybox/admin.password; grep -E "username\|login_path" /etc/proxybox/config.yaml'`。 |
+| 流量页一直 0 但你在过墙 | worker 抓了第一拍但还没写桶。`cd <proxybox-安装目录> && docker compose logs --tail=80 proxybox-traffic-worker`。 |
+| 忘了登录地址 / 密码 | `cd <proxybox-安装目录> && docker compose exec proxybox-admin sh -c 'cat /etc/proxybox/admin.password; grep -E "username\|login_path" /etc/proxybox/config.yaml'`。 |
 
 Docker 服务日志用 `docker compose logs` 查看。
 

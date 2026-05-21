@@ -1,6 +1,6 @@
 # Claude Code skill
 
-> A bundled Claude Code skill that drives the Docker-first install over SSH — minimal VPS check, `git clone` / update, Docker runtime provisioning via `deploy/docker-install.sh`, verification, credential handoff.
+> A bundled Claude Code skill that drives the Docker-first install over SSH — minimal VPS check, clone into a new install directory, Docker runtime provisioning via `deploy/docker-install.sh`, verification, credential handoff.
 
 For the high-level walkthrough, see [Getting started · Path 3](../getting-started.md#path-3--claude-code).
 
@@ -31,7 +31,7 @@ Claude will:
 | 2 | Use a temporary session-local `known_hosts` file that is deleted on shell exit instead of editing your normal SSH trust store. |
 | 3 | Run a minimal inline VPS check before the repo exists. |
 | 4 | Install bootstrap tools (`git`, `curl`, `ca-certificates`) if missing. |
-| 5 | `git clone https://github.com/carlos0xx/proxybox /opt/proxybox`, or update an existing checkout from `origin/main` with `git pull --ff-only origin main`. |
+| 5 | Clone `https://github.com/carlos0xx/proxybox` into a new `/opt/proxybox-<timestamp>-<suffix>` directory and refuse to touch existing directories. |
 | 6 | Run `bash deploy/docker-install.sh`, which checks/installs Docker + Compose, starts Docker, and scans free host ports. |
 | 7 | Start the isolated Docker stack. |
 | 8 | Verify the Docker services are `Up`. |
@@ -72,7 +72,7 @@ If you also pass Telegram bot details in the initial prompt:
 
 > deploy proxybox on 1.2.3.4 with TG bot token 123:ABC for user id 4567
 
-…the skill will additionally write `/opt/proxybox/bot.env` and run `docker compose --profile bot up -d proxybox-bot` at the end.
+…the skill will additionally write `bot.env` inside the new install directory and run `docker compose --profile bot up -d proxybox-bot` at the end.
 
 ---
 

@@ -11,8 +11,9 @@ For the high-level walkthrough, see [Getting started · Path 1](../getting-start
 ```bash
 ssh root@<your-vps>
 apt-get update && apt-get install -y git curl ca-certificates
-git clone https://github.com/carlos0xx/proxybox /opt/proxybox
-cd /opt/proxybox
+INSTALL_DIR="/opt/proxybox-$(date +%Y%m%d-%H%M%S)-$$"
+git clone https://github.com/carlos0xx/proxybox "$INSTALL_DIR"
+cd "$INSTALL_DIR"
 bash deploy/install.sh --native --fresh --lang en   # --lang zh for Chinese output
 ```
 
@@ -67,7 +68,7 @@ sudo bash deploy/check-prereqs.sh --install  # also apt-install missing apt deps
 | 3 | **sing-box binary** — latest GitHub release for the host's arch (amd64 / arm64). |
 | 4 | **sing-box systemd unit** — `/etc/systemd/system/sing-box.service`. |
 | 5 | **Reality keypair** (X25519), **Hy2 self-signed cert**, random **SNI** picked per install, `experimental.clash_api` enabled. |
-| 6 | **Python 3.11 venv** at `/opt/proxybox/.venv` + `pip install -e .`; an existing non-3.11 venv is recreated. |
+| 6 | **Python 3.11 venv** at `<proxybox-install-dir>/.venv` + `pip install -e .`; an existing non-3.11 venv in that install dir is recreated. |
 | 7 | **`/etc/proxybox/config.yaml`** — random `admin.token` (24 bytes), random `admin.login_path` (12 alnum), `features.url_token_bypass: false`, and `server.public_host` auto-detected via `ifconfig.me` / `ipify.org`. Mode 0600, root-owned. **The password lives separately** at `/etc/proxybox/admin.password` (mode 0400, root-owned) so a casual `cat config.yaml` cannot leak it. |
 | 8 | **fail2ban `[manual]` jail** in `/etc/fail2ban/jail.d/proxybox.local` with `backend=systemd`, plus an `sshd` backend override so minimal images without `/var/log/auth.log` do not fail. |
 | 9 | **Four systemd units** — `proxybox-admin`, `proxybox-traffic-worker`, `proxybox-bot` (disabled by default). |

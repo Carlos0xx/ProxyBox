@@ -41,8 +41,9 @@
 ```bash
 ssh root@<your-vps>
 apt-get update && apt-get install -y git curl ca-certificates
-git clone https://github.com/carlos0xx/proxybox /opt/proxybox
-cd /opt/proxybox && bash deploy/install.sh
+INSTALL_DIR="/opt/proxybox-$(date +%Y%m%d-%H%M%S)-$$"
+git clone https://github.com/carlos0xx/proxybox "$INSTALL_DIR"
+cd "$INSTALL_DIR" && bash deploy/install.sh
 ```
 
 Running `deploy/install.sh` without arguments shows a Chinese mode picker for **Docker install** or **native install**. Press Enter for Docker: container isolation, automatic port selection, and no host systemd/fail2ban/Caddy writes. If the VPS already runs websites, panels, or production services, use Docker. Native install writes Python, sing-box, systemd units, and fail2ban directly to the host; only use it on a clean dedicated VPS.
@@ -57,15 +58,9 @@ bash deploy/install.sh --native --fresh --lang zh
 Docker install provisions Docker/Compose and the port scanner if missing, scans host ports, writes `.env`, and creates fresh Compose project volumes, credentials, keys, and subscription URLs without deleting any older ProxyBox project.
 
 > [!IMPORTANT]
-> Installation red line: never delete files or services on the user's VPS. Installers and deploy agents may only touch ProxyBox resources created for this install, and must not touch any user data, files, services, containers, or volumes outside this install. On conflicts, pick different ports, create a new isolated instance, or fail clearly.
+> Installation red line: never delete, modify, overwrite, or reuse files/services on the user's VPS outside this install. Even if `/opt/proxybox` or another same-name directory already exists, leave it untouched, clone into a new `proxybox-<timestamp>-<suffix>` directory, and only touch resources created for this run.
 
-To upgrade the current project in place instead of creating a fresh project:
-
-```bash
-cd /opt/proxybox
-git pull
-PROXYBOX_UPGRADE=1 bash deploy/docker-install.sh
-```
+Upgrades are not installs. Only run an in-place upgrade when you explicitly choose the exact existing ProxyBox install directory; the normal install flow always creates a new directory and a new isolated Docker project.
 
 ### B · Claude Code / Codex
 
@@ -76,7 +71,7 @@ mkdir -p ~/.claude/skills/proxybox-deploy
 cp -r deploy/claude-skill/* ~/.claude/skills/proxybox-deploy/
 ```
 
-Then in any session: *"deploy proxybox on my VPS at 1.2.3.4 using ~/.ssh/id_ed25519"*. The agent uses an auto-deleted temporary SSH `known_hosts` → runs a minimal VPS check → `git clone` / update → Docker port pre-flight → `deploy/docker-install.sh` → service verification → hands back the login URL + credentials.
+Then in any session: *"deploy proxybox on my VPS at 1.2.3.4 using ~/.ssh/id_ed25519"*. The agent uses an auto-deleted temporary SSH `known_hosts` → runs a minimal VPS check → clones into a new install directory → Docker port pre-flight → `deploy/docker-install.sh` → service verification → hands back the login URL + credentials.
 
 For Codex or other agents, point them at [`deploy/claude-skill/SKILL.md`](./deploy/claude-skill/SKILL.md) — the instructions are framework-agnostic.
 
@@ -85,14 +80,15 @@ For Codex or other agents, point them at [`deploy/claude-skill/SKILL.md`](./depl
 ```bash
 ssh root@<your-vps>
 apt-get update && apt-get install -y git curl ca-certificates
-git clone https://github.com/carlos0xx/proxybox /opt/proxybox
-cd /opt/proxybox && bash deploy/install.sh --native --fresh
+INSTALL_DIR="/opt/proxybox-$(date +%Y%m%d-%H%M%S)-$$"
+git clone https://github.com/carlos0xx/proxybox "$INSTALL_DIR"
+cd "$INSTALL_DIR" && bash deploy/install.sh --native --fresh
 ```
 
 Fresh mode clears old ProxyBox-managed state first, then generates a Reality keypair, Hy2 cert, random 16-char admin password, and a random five-letter first device. Omit `--fresh` only when intentionally preserving an existing ProxyBox install.
 
 > [!IMPORTANT]
-> The installer prints login URL + password **once**. Copy them into a password manager before closing the terminal. Docker recovery: `cd /opt/proxybox && docker compose exec proxybox-admin sh -c 'cat /etc/proxybox/admin.password; grep -E "username|login_path" /etc/proxybox/config.yaml'`.
+> The installer prints login URL + password **once**. Copy them into a password manager before closing the terminal. Docker recovery: `cd <proxybox-install-dir> && docker compose exec proxybox-admin sh -c 'cat /etc/proxybox/admin.password; grep -E "username|login_path" /etc/proxybox/config.yaml'`.
 
 ---
 

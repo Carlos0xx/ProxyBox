@@ -2,11 +2,12 @@
 # ProxyBox installer — unified entrypoint for Docker or native install.
 #
 # Usage:
-#   git clone https://github.com/carlos0xx/proxybox /opt/proxybox
-#   cd /opt/proxybox && bash deploy/install.sh                       # choose install mode
-#   cd /opt/proxybox && bash deploy/install.sh --docker              # Docker install
-#   cd /opt/proxybox && bash deploy/install.sh --native --fresh      # native install
-#   cd /opt/proxybox && bash deploy/install.sh --fresh --lang zh     # native back-compat
+#   INSTALL_DIR="/opt/proxybox-$(date +%Y%m%d-%H%M%S)-$$"
+#   git clone https://github.com/carlos0xx/proxybox "$INSTALL_DIR"
+#   cd "$INSTALL_DIR" && bash deploy/install.sh                      # choose install mode
+#   cd "$INSTALL_DIR" && bash deploy/install.sh --docker             # Docker install
+#   cd "$INSTALL_DIR" && bash deploy/install.sh --native --fresh     # native install
+#   cd "$INSTALL_DIR" && bash deploy/install.sh --fresh --lang zh    # native back-compat
 #
 # Idempotent: re-running it on an existing install does nothing destructive,
 # only fills in missing pieces. Safe to run repeatedly.

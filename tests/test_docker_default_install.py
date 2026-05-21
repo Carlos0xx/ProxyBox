@@ -68,8 +68,8 @@ def test_docker_install_provisions_runtime_and_scans_ports() -> None:
 
 
 def test_install_red_line_is_documented_for_docker_path() -> None:
-    red_line = "安装红线: 不要删除用户 VPS 上任何文件和服务"
-    scope = "绝不能碰本次安装以外任何用户数据、文件、服务、容器或 volume"
+    red_line = "安装红线: 不要删除、修改、覆盖或复用用户 VPS 上本次安装以外的任何文件和服务"
+    scope = "即便宿主机已经存在 `/opt/proxybox` 或同名目录,也必须保留不动"
 
     assert red_line in README_ZH
     assert scope in README_ZH
