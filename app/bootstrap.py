@@ -153,9 +153,7 @@ def _gen_singbox_config(sb_dir: Path) -> None:
 
     cfg = {
         "log": {"level": "info", "timestamp": True},
-        "experimental": {
-            "clash_api": {"external_controller": f"0.0.0.0:{ports['clash']}"}
-        },
+        "experimental": {"clash_api": {"external_controller": f"0.0.0.0:{ports['clash']}"}},
         "inbounds": [
             {
                 "type": "vless",

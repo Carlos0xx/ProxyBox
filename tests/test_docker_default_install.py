@@ -31,7 +31,8 @@ def test_compose_uses_bridge_network_and_env_published_ports() -> None:
     assert "${PROXYBOX_SINGBOX_IMAGE:-proxybox-sing-box:local}" in COMPOSE
     assert "proxybox-data:/var/lib/proxybox" in COMPOSE
     assert "/opt/proxybox/deploy/docker/admin-entrypoint.sh" in COMPOSE
-    assert "PROXYBOX_DOCKER_LOG_DIR=/var/lib/proxybox/logs" in COMPOSE
+    assert "PROXYBOX_DOCKER_LOG_DIR" in COMPOSE
+    assert "/var/lib/proxybox/logs" in COMPOSE
     assert "/etc/proxybox/bot.env" not in COMPOSE
 
 

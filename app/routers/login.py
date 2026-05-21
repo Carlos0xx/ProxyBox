@@ -177,6 +177,7 @@ _PASSKEY_LOGIN_SCRIPT = """
   </script>
 """
 
+
 def _render(
     action: str = "/login",
     error: str = "",

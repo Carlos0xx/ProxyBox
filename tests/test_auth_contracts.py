@@ -174,7 +174,8 @@ def test_password_login_sets_instance_scoped_cookie(
 ) -> None:
     cfg_path = _write_config(tmp_path)
     password_file = tmp_path / "admin.password"
-    password_file.write_text("secret-password", encoding="utf-8")
+    test_pw = "pw-for-test-only"
+    password_file.write_text(test_pw, encoding="utf-8")
     password_file.chmod(0o400)
     monkeypatch.setenv("PROXYBOX_CONFIG", str(cfg_path))
     reset_settings_cache()
@@ -186,7 +187,7 @@ def test_password_login_sets_instance_scoped_cookie(
         with TestClient(app, follow_redirects=False) as client:
             res = client.post(
                 "/login/login-secret",
-                data={"username": "admin", "password": "secret-password"},
+                data={"username": "admin", "password": test_pw},
             )
     finally:
         reset_settings_cache()
