@@ -329,7 +329,10 @@ def build_clash_yaml(
                 "type": "hysteria2",
                 "server": vps_host,
                 "port": device["hy2_port"],
+                # Mihomo uses "password"; Stash uses "auth" for the same Hy2 secret.
+                # Emitting both keeps one Clash YAML compatible with both clients.
                 "password": device["hy2_password"],
+                "auth": device["hy2_password"],
                 "sni": r["sni"],
                 "obfs": "salamander",
                 "obfs-password": _hy2_obfs_password(sb_cfg),

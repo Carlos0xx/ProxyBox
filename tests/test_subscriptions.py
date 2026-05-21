@@ -114,6 +114,8 @@ def test_clash_yaml_uses_split_rules_without_binance(monkeypatch):
     assert group_names >= {"PROXY", "AUTO", "AI", "Streaming", "China", "Final"}
     hy2_proxy = next(proxy for proxy in cfg["proxies"] if proxy["type"] == "hysteria2")
     auto_group = next(group for group in cfg["proxy-groups"] if group["name"] == "AUTO")
+    assert hy2_proxy["password"] == _fake_device()["hy2_password"]
+    assert hy2_proxy["auth"] == _fake_device()["hy2_password"]
     assert hy2_proxy["alpn"] == ["h3"]
     assert auto_group["url"] == "https://www.gstatic.com/generate_204"
     assert auto_group["lazy"] is False
