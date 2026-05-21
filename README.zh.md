@@ -78,13 +78,13 @@ docker compose up -d
 
 ```text
 .
-├── app/        FastAPI 管理服务
-├── bot/        Telegram bot (可选)
-├── static/     单文件 SPA (双语)
-├── deploy/     安装器、预检、HTTPS 配置、AI skill、systemd unit
-├── docs/       Markdown 文档
-├── scripts/    发布审计 + PII 检查
-└── tests/      pytest 测试
+├── app/        管理后端 —— FastAPI 服务、SQLite、写 sing-box config
+├── bot/        手机控制面 —— Web UI 之外的 Telegram 备选入口
+├── static/     Web 前端 —— 后端挂载的单文件双语 SPA
+├── deploy/     部署与运维 —— 安装器、预检、HTTPS、AI skill
+├── docs/       用户文档 —— 指南 · 架构 · API · 部署
+├── scripts/    发布闸门 —— PII 黑名单 + 7 道审计
+└── tests/      回归测试 —— 配置加载、订阅、traffic worker
 ```
 
 按服务展开的详细架构见 [`docs/architecture.md`](./docs/architecture.md)。

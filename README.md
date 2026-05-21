@@ -78,13 +78,13 @@ Multi-arch images at `ghcr.io/carlos0xx/proxybox:latest`. No fail2ban or HTTPS U
 
 ```text
 .
-├── app/        FastAPI admin service
-├── bot/        Telegram bot (opt-in)
-├── static/     Single-file SPA (bilingual)
-├── deploy/     Installer, pre-flight, HTTPS provisioning, AI skill, systemd units
-├── docs/       Markdown documentation
-├── scripts/    Release audit + PII check
-└── tests/      pytest suite
+├── app/        Admin backend — FastAPI service, SQLite, sing-box config writer
+├── bot/        Mobile control surface — Telegram alternative to the web UI
+├── static/     Web UI — bilingual single-file SPA served by the backend
+├── deploy/     Provisioning + ops — installer, pre-flight, HTTPS, AI skill
+├── docs/       User documentation — guide · architecture · API · deploy
+├── scripts/    Release gates — PII blocklist + 7-step audit
+└── tests/      Regression coverage — config loader, subscriptions, traffic worker
 ```
 
 For service-by-service internals see [`docs/architecture.md`](./docs/architecture.md).
