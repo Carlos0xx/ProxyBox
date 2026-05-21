@@ -79,7 +79,7 @@ if [ "$LANG_CHOICE" = "zh" ]; then
     M_ADV_PASSKEY="passkey   config.yaml 里 features.passkey=true + 套 HTTPS"
     M_ADV_BOT="TG bot    填 /etc/proxybox/bot.env, 然后 systemctl enable --now proxybox-bot"
     M_ADV_TLS="HTTPS     Caddy + Let's Encrypt 反代 8080 (生产环境)"
-    M_FOOTER_TIP="凭据备份位置: %s/config.yaml (admin.username / admin.password 字段)"
+    M_FOOTER_TIP="凭据找回: 用户名/login_path 在 %s/config.yaml,密码在 %s/admin.password (0400)"
     M_ERR_UNSUPPORTED_ARCH="错误: 不支持的架构 %s"
 else
     M_NOT_PROXYBOX_DIR="ERROR: PROXYBOX_DIR=%s doesn't look like a ProxyBox checkout"
@@ -124,7 +124,7 @@ else
     M_ADV_PASSKEY="passkey   set features.passkey=true + passkey.rp_id/origin in config.yaml + Caddy/TLS"
     M_ADV_BOT="TG bot    fill /etc/proxybox/bot.env then systemctl enable --now proxybox-bot"
     M_ADV_TLS="HTTPS     install Caddy + Let's Encrypt in front of 8080 for production"
-    M_FOOTER_TIP="credentials backup: %s/config.yaml (admin.username / admin.password fields)"
+    M_FOOTER_TIP="credentials recovery: username/login_path in %s/config.yaml; password in %s/admin.password (0400)"
     M_ERR_UNSUPPORTED_ARCH="ERROR: unsupported arch %s"
 fi
 
@@ -318,11 +318,17 @@ if [ ! -f "$CONFIG_DIR/config.yaml" ]; then
     PUBLIC_HOST=$(curl -fsS --max-time 5 https://ifconfig.me 2>/dev/null \
                  || curl -fsS --max-time 5 https://api.ipify.org 2>/dev/null \
                  || echo "")
+    # Password lives in /etc/proxybox/admin.password (mode 0400), NOT in
+    # config.yaml. Keeps cat config.yaml screenshot-safe and backup-safe
+    # while still being one ``cat`` away for password recovery.
+    umask 077
+    printf '%s' "$ADMIN_PASSWORD" > "$CONFIG_DIR/admin.password"
+    chmod 0400 "$CONFIG_DIR/admin.password"
+    umask 022
     cat > "$CONFIG_DIR/config.yaml" <<YAML
 admin:
   token: "$ADMIN_TOKEN"
   username: "admin"
-  password: "$ADMIN_PASSWORD"
   login_path: "$ADMIN_LOGIN_PATH"
   host: "0.0.0.0"
   port: 8080
@@ -491,7 +497,8 @@ systemctl restart proxybox-admin >/dev/null 2>&1 || true
 # Read credentials for the summary block. Read AFTER the lock-down so we
 # show the user the actual state of the running config.
 ADMIN_USER=$(.venv/bin/python -c "import yaml; print(yaml.safe_load(open('$CONFIG_DIR/config.yaml'))['admin'].get('username', 'admin'))")
-ADMIN_PASSWORD=$(.venv/bin/python -c "import yaml; print(yaml.safe_load(open('$CONFIG_DIR/config.yaml'))['admin'].get('password', ''))")
+# Password lives in its own 0400 file, not in YAML — see app/services/admin_password.py.
+ADMIN_PASSWORD=$(cat "$CONFIG_DIR/admin.password" 2>/dev/null || true)
 ADMIN_LOGIN_PATH=$(.venv/bin/python -c "import yaml; print(yaml.safe_load(open('$CONFIG_DIR/config.yaml'))['admin'].get('login_path', ''))")
 if [ -n "$ADMIN_LOGIN_PATH" ]; then
     LOGIN_URL="$ADMIN_BASE/login/$ADMIN_LOGIN_PATH"
@@ -571,6 +578,6 @@ echo ""
 
 # ── Footer (dim — backup info, not primary action) ──────────────────
 printf "  %s" "$C_DIM"
-printf "$M_FOOTER_TIP" "$CONFIG_DIR"
+printf "$M_FOOTER_TIP" "$CONFIG_DIR" "$CONFIG_DIR"
 printf "%s\n" "$C_RESET"
 echo ""

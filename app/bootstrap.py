@@ -148,7 +148,13 @@ def _gen_login_path() -> str:
 
 
 def _gen_proxybox_config(pb_dir: Path) -> dict[str, str]:
-    """Returns the generated admin credentials so the caller can echo them."""
+    """Returns the generated admin credentials so the caller can echo them.
+
+    The password is **not** written into config.yaml — it goes to a
+    sibling file ``/etc/proxybox/admin.password`` (mode 0400) so a
+    casual ``cat config.yaml`` (screenshot, backup, paste-in-chat) can't
+    leak the credential. See ``app.services.admin_password``.
+    """
     admin_token = secrets.token_urlsafe(24)
     admin_password = _gen_admin_password()
     admin_login_path = _gen_login_path()
@@ -156,7 +162,6 @@ def _gen_proxybox_config(pb_dir: Path) -> dict[str, str]:
     yaml_text = f"""admin:
   token: "{admin_token}"
   username: "admin"
-  password: "{admin_password}"
   login_path: "{admin_login_path}"
   host: "0.0.0.0"
   port: 8080
@@ -193,6 +198,14 @@ features:
     out = pb_dir / "config.yaml"
     out.write_text(yaml_text)
     out.chmod(0o600)
+
+    # Write the password to its sibling file (mode 0400). Lazy import to
+    # avoid a circular dep between config.py (PathsSettings) and the
+    # bootstrap module on fresh installs where config doesn't exist yet.
+    from app.services import admin_password as _ap
+
+    _ap.write(pb_dir / "admin.password", admin_password)
+
     return {
         "token": admin_token,
         "password": admin_password,
@@ -226,8 +239,9 @@ def main() -> int:
             f"  Password     {creds['password']}\n"
             "----------------------------------------------------------------\n"
             "  Copy these into a password manager BEFORE this container exits.\n"
-            "  Full values also live in /etc/proxybox/config.yaml (mode 0600)\n"
-            "  under admin.password / admin.login_path / admin.token.\n"
+            "  Recovery:\n"
+            "    cat /etc/proxybox/admin.password    (password, mode 0400)\n"
+            "    grep -E 'token|login_path' /etc/proxybox/config.yaml\n"
             "================================================================\n",
             flush=True,
         )

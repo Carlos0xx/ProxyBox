@@ -10,6 +10,15 @@ admin:
   # Token in URL path: /admin/{token}/api/...
   # In production, set ADMIN_TOKEN env var; for dev you may hardcode a value.
   token: "${ADMIN_TOKEN}"
+  # Browser login username (default "admin"). The PASSWORD does NOT live in
+  # this file — it goes in /etc/proxybox/admin.password (mode 0400, root-
+  # owned). Keeps cat config.yaml screenshot-safe / backup-safe. See
+  # paths.admin_password_file below to override the location.
+  username: "admin"
+  # /login/{login_path} is the actual form URL; /login itself returns 404
+  # so common-path brute-force scans never see a form. install.sh / Docker
+  # bootstrap generate a 12-char random value automatically.
+  login_path: ""
   host: "0.0.0.0"
   port: 8080
 
@@ -25,6 +34,7 @@ paths:
   sub_dir: /var/www/proxybox-sub
   singbox_config: /etc/sing-box/config.json
   session_secret: /etc/proxybox/session-secret
+  admin_password_file: /etc/proxybox/admin.password
 
 services:
   # systemd unit names probed by GET /api/status.

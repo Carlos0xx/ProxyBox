@@ -50,6 +50,42 @@ and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   returns `https://{domain}/login/{login_path}` when set, matching the
   rest of the post-install handoff.
 
+### Security — Codex audit follow-up #2 (the deferred items)
+
+- **Admin password moved out of `config.yaml`.** The password used to
+  live inline in `/etc/proxybox/config.yaml` (mode 0600). A casual
+  `cat config.yaml` in a screen-share / screenshot / backup would leak
+  it. Now it lives in its own sibling file
+  `/etc/proxybox/admin.password` (mode 0400, root-owned), written
+  atomically via tmp + `os.replace`. `cat config.yaml` is now
+  screenshot-safe; password recovery is still one `cat /etc/proxybox/admin.password`
+  away over SSH. New `app/services/admin_password.py` module is the
+  single writer (used by install.sh, Docker bootstrap, and the
+  account POST handler).
+- **Implicit migration.** The config loader now reads the password
+  from the file when present; falls back to the YAML field for
+  existing v0.2.x installs. The next password change via the SPA's
+  Security → Login card writes to the file and strips the stale YAML
+  field — drift-free upgrade with zero operator action.
+- **`shell.py` rejects string commands.** The wrapper used to allow
+  `shell.run("...some pipeline...")` which silently enabled
+  `shell=True`. Current callsites all pass argv lists, so there's no
+  active vulnerability, but the door is now closed: `shell=False` is
+  explicit, and a string argument raises `TypeError` at runtime.
+  The one historical string callsite (`top | awk` in
+  `system_stats.cpu_pct`) was rewritten as pure-Python parsing.
+- **CI supply-chain hardening.** Every third-party GitHub Action is
+  now pinned to its commit SHA (with a `# vX.Y.Z` comment for diff
+  readability) — was floating major tags like `@v4`. Dependabot
+  config (`.github/dependabot.yml`) tracks three ecosystems
+  (github-actions, pip, docker) and opens weekly PRs to bump pins.
+  Two new workflows:
+  - `pip-audit` in `test.yml` — fails CI on any CVE in the installed
+    Python environment, scanned via `pip-audit --strict`.
+  - `secrets-scan.yml` — second-layer secret scan via Yelp's
+    `detect-secrets` (different ruleset from gitleaks), driven by
+    `scripts/detect-secrets-ci.py`.
+
 ## [v0.2.0] — SPA English version + bilingual login form
 
 ### Added

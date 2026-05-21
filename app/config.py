@@ -68,6 +68,11 @@ class PathsSettings(BaseModel):
     sub_dir: Path = Path("/var/www/proxybox-sub")
     singbox_config: Path = Path("/etc/sing-box/config.json")
     session_secret: Path = Path("/etc/proxybox/session-secret")
+    # The admin password lives in this sibling file (mode 0400, root-owned)
+    # rather than inside config.yaml itself. Keeps the password out of any
+    # accidental config.yaml screenshot / backup / paste, while still being
+    # one ``cat`` away for SSH-style password recovery.
+    admin_password_file: Path = Path("/etc/proxybox/admin.password")
 
 
 class ServicesSettings(BaseModel):
@@ -136,7 +141,17 @@ class AppConfig(BaseModel):
                 f"config not found: {target} — see config.example.yaml in the repo"
             )
         raw = yaml.safe_load(target.read_text()) or {}
-        return cls.model_validate(_expand_env(raw))
+        cfg = cls.model_validate(_expand_env(raw))
+        # Admin password lives in its own root-owned file, not the YAML — see
+        # PathsSettings.admin_password_file. If the file is present we use it
+        # and override whatever YAML may carry; if not we fall through to the
+        # YAML field for back-compat with v0.2.x installs.
+        from app.services.admin_password import read as _read_admin_password
+
+        file_pw = _read_admin_password(cfg.paths.admin_password_file)
+        if file_pw:
+            cfg.admin.password = file_pw
+        return cfg
 
 
 @lru_cache(maxsize=1)

@@ -14,17 +14,21 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      # Third-party actions are pinned to commit SHAs (not tags) per
+      # supply-chain hygiene. Dependabot keeps these current — see
+      # .github/dependabot.yml. The trailing comment is the human-readable
+      # version so the diff is reviewable.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
       - name: Set up QEMU (for arm64 cross-build)
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130  # v3.7.0
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3.12.0
 
       - name: Log in to GHCR
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -32,7 +36,7 @@ jobs:
 
       - name: Tag metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051  # v5.10.0
         with:
           images: ghcr.io/carlos0xx/proxybox
           tags: |
@@ -42,7 +46,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build (PRs) / Build + push (main + tags)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25  # v5.4.0
         with:
           context: .
           platforms: linux/amd64,linux/arm64

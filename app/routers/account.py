@@ -33,6 +33,7 @@ from pydantic import BaseModel, Field
 
 from app.auth.token import admin_auth
 from app.config import get_settings, reset_settings_cache
+from app.services import admin_password as _admin_password
 
 router = APIRouter(
     prefix="/admin/{token}/api/admin",
@@ -101,6 +102,10 @@ async def update_account(body: AccountUpdate) -> dict:
     path, cfg = _load_config()
     admin = cfg.setdefault("admin", {})
 
+    settings = get_settings()
+    pw_file = settings.paths.admin_password_file
+    current_pw_on_disk = settings.admin.password  # sourced from file by loader
+
     if body.new_password is not None:
         # Password change requires current password as a defense against
         # a stolen-cookie attacker. (Username and login-path don't grant
@@ -110,23 +115,28 @@ async def update_account(body: AccountUpdate) -> dict:
                 400,
                 {"code": "current_password_required", "message": "改密码需要先输入当前密码"},
             )
-        if not secrets.compare_digest(
-            body.current_password.encode(), admin.get("password", "").encode()
-        ):
+        if not secrets.compare_digest(body.current_password.encode(), current_pw_on_disk.encode()):
             raise HTTPException(
                 400,
                 {"code": "current_password_wrong", "message": "当前密码错误"},
             )
-        admin["password"] = body.new_password
+        # Write to the sibling file (mode 0400), not the YAML. Also strip any
+        # legacy plaintext that may still be in config.yaml from a v0.2.x
+        # install — drift-free migration the operator gets for free on their
+        # next password change.
+        _admin_password.write(pw_file, body.new_password)
+        if "password" in admin:
+            admin.pop("password", None)
 
     if body.username is not None:
         admin["username"] = body.username
 
     _save_config(path, cfg)
+    new_pw_set = bool(body.new_password) or bool(current_pw_on_disk)
     return {
         "ok": True,
-        "username": admin["username"],
-        "password_set": bool(admin.get("password")),
+        "username": admin.get("username", settings.admin.username),
+        "password_set": new_pw_set,
     }
 
 
