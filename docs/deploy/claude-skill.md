@@ -29,7 +29,7 @@ Claude will:
 | --- | --- |
 | 1 | Ask for SSH user / auth method if missing from the prompt. |
 | 2 | Use a temporary session-local `known_hosts` file that is deleted on shell exit instead of editing your normal SSH trust store. |
-| 3 | Require an explicit Docker/native install-mode choice before running remote install commands. |
+| 3 | Require an explicit Docker/native install-mode choice before running remote install commands; Docker being installed, supported, or recommended is not consent. |
 | 4 | Run a minimal inline VPS check before the repo exists. |
 | 5 | Install bootstrap tools (`git`, `curl`, `ca-certificates`) if missing. |
 | 6 | Clone `https://github.com/carlos0xx/proxybox` into a new `/opt/proxybox-<timestamp>-<suffix>` directory and refuse to touch existing directories. |

@@ -71,7 +71,7 @@ mkdir -p ~/.claude/skills/proxybox-deploy
 cp -r deploy/claude-skill/* ~/.claude/skills/proxybox-deploy/
 ```
 
-然后在对话里:*"帮我在 1.2.3.4 这台 VPS 上部署 proxybox,SSH key 是 ~/.ssh/id_ed25519"*。代理必须先让你选择 Docker 或宿主机安装,再走自动删除的临时 SSH `known_hosts` → 最小 VPS 检查 → 克隆到新的安装目录 → 运行 `deploy/install.sh --docker` 或 `deploy/install.sh --native --fresh` → 验证服务 → 把登录地址 + 凭据发给你。
+然后在对话里:*"帮我在 1.2.3.4 这台 VPS 上部署 proxybox,SSH key 是 ~/.ssh/id_ed25519"*。代理必须先让你选择 Docker 或宿主机安装;服务器已有 Docker、README 推荐 Docker、端口更适合 Docker 都不能代替你的选择。确认后再走自动删除的临时 SSH `known_hosts` → 最小 VPS 检查 → 克隆到新的安装目录 → 运行 `deploy/install.sh --docker` 或 `deploy/install.sh --native --fresh` → 验证服务 → 把登录地址 + 凭据发给你。
 
 Codex 或其他代理:直接把 [`deploy/claude-skill/SKILL.md`](./deploy/claude-skill/SKILL.md) 喂给它 —— 指令是通用的,不绑 Claude Code。
 

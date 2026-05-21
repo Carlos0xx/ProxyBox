@@ -5,9 +5,10 @@ description: Deploy ProxyBox (per-device isolated home proxy panel) on a Debian 
 
 # ProxyBox · One-shot VPS deploy
 
-This skill drives a selected install mode of ProxyBox onto a user-supplied
-VPS. It must not silently pick a mode for the user. Docker is recommended so
-existing host services are not disturbed.
+This skill drives a user-selected install mode of ProxyBox onto a user-supplied
+VPS. It must stop and ask for the install mode before any clone or install
+command. Docker is recommended so existing host services are not disturbed, but
+that recommendation is not consent to choose Docker for the user.
 Output is a running stack of:
 
 - sing-box (VLESS Reality + Hysteria2 templates)
@@ -23,7 +24,8 @@ Ask the user for, in order:
 2. **SSH user** — must be root OR have passwordless sudo
 3. **SSH auth** — key path (preferred) or password (worse — record in
    blocklist, rotate after install)
-4. **Install mode** — ask explicitly unless the user already stated it:
+4. **Install mode** — ask explicitly unless the user already stated one of the
+   two modes in this conversation:
    - Docker install (recommended): isolated containers, auto-selected ports,
      no host Python/systemd/fail2ban/Caddy writes.
    - Native host install (advanced): writes Python, sing-box, systemd units,
@@ -35,7 +37,25 @@ Ask the user for, in order:
 exists (e.g. they can put creds in an .env file on their laptop and reference
 the path).
 
+Install-mode consent is strict:
+
+- Docker being installed on the VPS is not consent.
+- Ubuntu / Debian being supported is not consent.
+- README recommending Docker is not consent.
+- Existing host port conflicts are not consent.
+- The agent's own judgment that Docker is safer is not consent.
+
+If the user has not explicitly answered "Docker" / "1" or "宿主机" / "2",
+stop before Step 1 and ask:
+
+> 请选择安装方式: 1) Docker 安装（推荐,容器隔离,适合已有服务的 VPS） 2) 宿主机安装（高级,会写宿主机 Python/systemd/fail2ban,只适合干净 VPS）
+
 ## Execution
+
+Do not run any SSH, `git clone`, or installer command until
+`PROXYBOX_INSTALL_MODE` has been set from the user's explicit answer. Never set
+`PROXYBOX_INSTALL_MODE=docker` merely because Docker is recommended or already
+installed.
 
 ### SSH session setup
 

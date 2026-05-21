@@ -71,7 +71,7 @@ mkdir -p ~/.claude/skills/proxybox-deploy
 cp -r deploy/claude-skill/* ~/.claude/skills/proxybox-deploy/
 ```
 
-Then in any session: *"deploy proxybox on my VPS at 1.2.3.4 using ~/.ssh/id_ed25519"*. The agent must ask you to choose Docker or native first, then uses an auto-deleted temporary SSH `known_hosts` → runs a minimal VPS check → clones into a new install directory → runs `deploy/install.sh --docker` or `deploy/install.sh --native --fresh` → service verification → hands back the login URL + credentials.
+Then in any session: *"deploy proxybox on my VPS at 1.2.3.4 using ~/.ssh/id_ed25519"*. The agent must ask you to choose Docker or native first; Docker already being installed, recommended, or a better fit for the ports is not consent. After your explicit answer, it uses an auto-deleted temporary SSH `known_hosts` → runs a minimal VPS check → clones into a new install directory → runs `deploy/install.sh --docker` or `deploy/install.sh --native --fresh` → service verification → hands back the login URL + credentials.
 
 For Codex or other agents, point them at [`deploy/claude-skill/SKILL.md`](./deploy/claude-skill/SKILL.md) — the instructions are framework-agnostic.
 

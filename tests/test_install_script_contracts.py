@@ -130,6 +130,17 @@ def test_deploy_skill_clones_new_directory_without_reusing_checkout() -> None:
     assert "exit 1" in DEPLOY_SKILL
 
 
+def test_deploy_skill_cannot_infer_install_mode_from_environment() -> None:
+    assert "must stop and ask for the install mode" in DEPLOY_SKILL
+    assert "before any clone or install" in DEPLOY_SKILL
+    assert "Docker being installed on the VPS is not consent" in DEPLOY_SKILL
+    assert "README recommending Docker is not consent" in DEPLOY_SKILL
+    assert "Existing host port conflicts are not consent" in DEPLOY_SKILL
+    assert "Never set" in DEPLOY_SKILL
+    assert "merely because Docker is recommended or already" in DEPLOY_SKILL
+    assert "Do not run any SSH, `git clone`, or installer command" in DEPLOY_SKILL
+
+
 def test_deploy_skill_uses_session_local_known_hosts() -> None:
     assert "PROXYBOX_KNOWN_HOSTS" in DEPLOY_SKILL
     assert 'UserKnownHostsFile="$PROXYBOX_KNOWN_HOSTS"' in DEPLOY_SKILL

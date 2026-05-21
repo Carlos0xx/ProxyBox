@@ -55,7 +55,7 @@ Then in any session:
 
 > deploy proxybox on my VPS at 1.2.3.4 using ~/.ssh/id_ed25519
 
-The agent must ask you to choose Docker or native first. It then uses an auto-deleted temporary SSH `known_hosts`, runs a minimal VPS check, clones the repo into a fresh per-install directory on the VPS, executes `deploy/install.sh --docker` or `deploy/install.sh --native --fresh`, verifies the core services, and relays the **login URL, username, password, and first device status** back to you.
+The agent must ask you to choose Docker or native first. Docker already being installed, recommended, or a better fit for the ports is not consent. After your explicit answer, it uses an auto-deleted temporary SSH `known_hosts`, runs a minimal VPS check, clones the repo into a fresh per-install directory on the VPS, executes `deploy/install.sh --docker` or `deploy/install.sh --native --fresh`, verifies the core services, and relays the **login URL, username, password, and first device status** back to you.
 
 For **Codex** or other coding agents, point them at [`deploy/claude-skill/SKILL.md`](../deploy/claude-skill/SKILL.md) — the instructions are framework-agnostic.
 

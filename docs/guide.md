@@ -73,7 +73,7 @@ Then ask in any session:
 
 > deploy proxybox on my VPS at 1.2.3.4 using ~/.ssh/id_ed25519
 
-The agent must ask you to choose Docker or native first, then walks auto-deleted temporary SSH `known_hosts` → minimal VPS check → clone into a fresh install directory → `deploy/install.sh --docker` or `deploy/install.sh --native --fresh` → verification → relays the credentials back. For Codex or other agents, point them at [`deploy/claude-skill/SKILL.md`](../deploy/claude-skill/SKILL.md) directly.
+The agent must ask you to choose Docker or native first; Docker already being installed, recommended, or a better fit for the ports is not consent. After your explicit answer it walks auto-deleted temporary SSH `known_hosts` → minimal VPS check → clone into a fresh install directory → `deploy/install.sh --docker` or `deploy/install.sh --native --fresh` → verification → relays the credentials back. For Codex or other agents, point them at [`deploy/claude-skill/SKILL.md`](../deploy/claude-skill/SKILL.md) directly.
 
 #### Path C — `install.sh`
 
@@ -225,7 +225,7 @@ cp -r deploy/claude-skill/* ~/.claude/skills/proxybox-deploy/
 
 > 帮我在 1.2.3.4 这台 VPS 上部署 proxybox,SSH key 是 ~/.ssh/id_ed25519
 
-代理必须先让你选择 Docker 或宿主机安装,再走自动删除的临时 SSH `known_hosts` → 最小 VPS 检查 → 克隆到新的安装目录 → `deploy/install.sh --docker` 或 `deploy/install.sh --native --fresh` → 验证服务 → 把凭据发给你。Codex 或其他代理:直接把 [`deploy/claude-skill/SKILL.md`](../deploy/claude-skill/SKILL.md) 喂给它即可。
+代理必须先让你选择 Docker 或宿主机安装;服务器已有 Docker、README 推荐 Docker、端口更适合 Docker 都不能代替你的选择。确认后再走自动删除的临时 SSH `known_hosts` → 最小 VPS 检查 → 克隆到新的安装目录 → `deploy/install.sh --docker` 或 `deploy/install.sh --native --fresh` → 验证服务 → 把凭据发给你。Codex 或其他代理:直接把 [`deploy/claude-skill/SKILL.md`](../deploy/claude-skill/SKILL.md) 喂给它即可。
 
 #### 方式 C — `install.sh`
 
