@@ -5,6 +5,23 @@ and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Security — Codex audit follow-up #5
+
+- **Admin-token rotation keeps `config.yaml` private.** The atomic rewrite now
+  chmods both the temporary file and final config back to `0600`, preventing a
+  default umask from widening `/etc/proxybox/config.yaml` to `0644` and exposing
+  `admin.token`.
+- **Admin-token rotation response matches the SPA.** The backend now returns the
+  `new_admin_url`, `old_token_short`, and no-restart timing fields the UI needs;
+  the dialog builds a full URL from the browser origin and no longer tells users
+  to wait for a restart that does not happen.
+- **Passkey management routes realigned.** The SPA now calls the actual
+  `/admin/{token}/api/auth/...` backend routes for passkey list/register/revoke,
+  and uses the public `/auth/webauthn/logout` endpoint for logout.
+- **Passkey challenge store capped.** In-memory WebAuthn challenges now evict
+  stale entries and cap live entries to prevent unbounded memory growth from
+  repeated public begin requests.
+
 ### Security — Codex audit follow-up #4
 
 - **Forwarded-header trust restricted to local reverse proxies.** Login

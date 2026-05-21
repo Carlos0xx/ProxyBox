@@ -2467,15 +2467,19 @@ function _bytesToB64url(b) {
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-// fetch wrapper that includes X-Admin-Token header (so the new
-// /admin/auth/* endpoints accept this admin session as authed)
+// Passkey management endpoints live under /admin/{token}/api/auth and are
+// gated by the normal admin session + URL-token checks.
 async function pkFetch(path, options = {}) {
   options.headers = options.headers || {};
-  options.headers['X-Admin-Token'] = TOKEN;
   if (options.body && !options.headers['Content-Type']) {
     options.headers['Content-Type'] = 'application/json';
   }
-  const r = await fetch(path, options);
+  const r = await fetch(API_BASE + path, options);
+  if (r.status === 401) {
+    const next = encodeURIComponent(window.location.pathname);
+    window.location.href = `${LOGIN_URL}?next=${next}`;
+    throw new Error('session expired — redirecting to login');
+  }
   if (!r.ok) {
     const t = await r.text();
     throw new Error(`${r.status}: ${t}`);
@@ -2487,7 +2491,7 @@ async function loadPasskeys() {
   const el = $('passkey-list');
   const sub = $('passkey-count-sub');
   try {
-    const d = await pkFetch('/admin/auth/passkeys');
+    const d = await pkFetch('/api/auth/passkeys');
     if (!d.passkeys || !d.passkeys.length) {
       if (sub) sub.textContent = '尚未注册任何 Passkey';
       el.innerHTML = '<div style="color: var(--text-3); padding: 28px 16px; text-align: center; border: 1px dashed var(--border-default); border-radius: 8px; font-size: var(--text-sm);">还没有注册任何 Passkey<br><span style="font-size: var(--text-xs); color: var(--text-4);">点右上「注册当前设备」开始,需要 Touch ID / Face ID 支持的浏览器</span></div>';
@@ -2532,7 +2536,7 @@ async function registerPasskey() {
   try {
     // 1. begin
     toast.info('准备中', '即将弹出 Touch ID');
-    const d1 = await pkFetch('/admin/auth/webauthn/register/begin', {
+    const d1 = await pkFetch('/api/auth/webauthn/register/begin', {
       method: 'POST',
       body: JSON.stringify({ label }),
     });
@@ -2563,7 +2567,7 @@ async function registerPasskey() {
     };
 
     // 5. complete
-    const d2 = await pkFetch('/admin/auth/webauthn/register/complete', {
+    const d2 = await pkFetch('/api/auth/webauthn/register/complete', {
       method: 'POST',
       body: JSON.stringify({ handle, label, attestation }),
     });
@@ -2577,11 +2581,7 @@ async function registerPasskey() {
 async function revokePasskey(cidEnc, label) {
   if (!confirm(`确定吊销 Passkey「${label || '未命名'}」?\n\n该设备将无法再用指纹/面容登录,但可以重新注册。`)) return;
   try {
-    const r = await fetch('/admin/auth/passkeys/' + cidEnc, {
-      method: 'DELETE',
-      headers: { 'X-Admin-Token': TOKEN },
-    });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    await pkFetch('/api/auth/passkeys/' + cidEnc, { method: 'DELETE' });
     toast.success('已吊销', label || '');
     await loadPasskeys();
   } catch (e) {
@@ -2594,11 +2594,11 @@ async function rotateAdminToken() {
     title: '轮换 ADMIN_TOKEN',
     body: `这会做以下事情:<br><br>
       • <strong>你当前 URL token 立即作废</strong>(旧书签失效)<br>
-      • <strong>所有 Passkey session 也会失效</strong>(下次进后台必须 Touch ID)<br>
+      • 当前 session 保持有效,但必须使用新 URL 前缀继续访问<br>
       • 已注册的 Passkey <strong>不受影响</strong>, 私钥还在你 Mac/iPhone<br>
       • 所有订阅 URL <strong>不受影响</strong>(所有设备订阅照常)<br>
-      • <code>proxy-admin</code> + <code>proxy-bot</code> 会在 3 秒后自动重启 (~3 秒中断)<br><br>
-      <span style="color:var(--warn);">操作不可撤销 (除非 SSH 手工恢复 env)。</span>`,
+      • 写入 <code>/etc/proxybox/config.yaml</code>,不需要重启服务<br><br>
+      <span style="color:var(--warn);">操作不可撤销 (除非 SSH 手工恢复 config.yaml)。</span>`,
     type: 'danger',
     confirmText: '确定轮换',
     confirmKind: 'danger',
@@ -2615,9 +2615,11 @@ async function rotateAdminToken() {
 }
 
 function showRotateResult(d) {
-  // Custom dialog showing new URL + countdown until services restart.
+  // Custom dialog showing the new URL. Build the absolute URL in the
+  // browser so it matches the real origin even behind Caddy / a tunnel.
   _captureDialogTpl();
   const bd = $('dialog-backdrop');
+  const newAdminUrl = new URL(d.new_admin_url || d.new_url_prefix, window.location.origin).href;
   bd.querySelector('.dialog').innerHTML = `
     <div class="dialog-head">
       <div class="dialog-icon accent">
@@ -2625,36 +2627,32 @@ function showRotateResult(d) {
       </div>
       <div style="flex:1;">
         <div class="dialog-title">✅ Token 已轮换</div>
-        <div class="card-sub" style="margin-top:4px;">旧 URL 已立即作废 · 所有 session 已失效</div>
+        <div class="card-sub" style="margin-top:4px;">旧 URL 已立即作废 · 订阅 URL 不受影响</div>
       </div>
     </div>
     <div class="dialog-body" style="padding: var(--space-4) var(--space-5);">
       <p style="margin: 0 0 8px; font-weight: var(--weight-medium);">新的应急 URL (复制保存 — 仅显示这一次):</p>
       <div style="background: var(--bg-canvas); padding: 12px; border-radius: 6px; margin-bottom: 10px; word-break: break-all; font-family: var(--font-mono); font-size: var(--text-sm); border: 1px solid var(--border-default); user-select: all;">
-        ${escapeHtml(d.new_admin_url)}
+        ${escapeHtml(newAdminUrl)}
       </div>
       <button class="btn btn-sm btn-primary" id="copy-new-url" style="margin-bottom: 16px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
         复制完整 URL
       </button>
       <div style="background: var(--surface-2); padding: var(--space-3) var(--space-4); border-radius: 6px; margin-bottom: var(--space-3);">
-        <p style="margin: 0 0 6px; font-weight: var(--weight-medium);" id="rotate-countdown-line">
-          <span id="rotate-countdown">⏳ 服务即将重启 (3 秒)...</span>
-        </p>
         <p style="margin: 0; font-size: var(--text-xs); color: var(--text-3);">
-          旧 token <code class="mono" style="color:var(--text-4);">${escapeHtml(d.old_token_short)}</code> 已失效;
-          env 备份: <code class="mono" style="color:var(--text-4); font-size: 10px;">${escapeHtml(d.env_backup)}</code>
+          旧 token <code class="mono" style="color:var(--text-4);">${escapeHtml(d.old_token_short || '—')}</code> 已失效。
         </p>
       </div>
       <div style="color: var(--text-3); font-size: var(--text-sm); line-height: 1.6;">
         ✓ Passkey 私钥仍在 Mac/iPhone Secure Enclave (不受影响)<br>
-        ✓ 重启后访问 <code class="mono">/admin/</code> 自动 Touch ID 登录<br>
+        ✓ 不需要重启服务,使用新 URL 继续访问<br>
         ✓ 订阅 URL 全部不受影响
       </div>
     </div>
     <div class="dialog-foot">
-      <button class="btn btn-ghost" id="rotate-close" disabled>等待重启...</button>
-      <button class="btn btn-primary" id="rotate-go" disabled>前往新地址</button>
+      <button class="btn btn-ghost" id="rotate-close">稍后再说</button>
+      <button class="btn btn-primary" id="rotate-go">前往新地址</button>
     </div>
   `;
   bd.classList.add('show');
@@ -2663,7 +2661,7 @@ function showRotateResult(d) {
   const copyBtn = bd.querySelector('#copy-new-url');
   copyBtn.onclick = async () => {
     try {
-      await navigator.clipboard.writeText(d.new_admin_url);
+      await navigator.clipboard.writeText(newAdminUrl);
       copyBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><polyline points="20 6 9 17 4 12"/></svg> 已复制';
       setTimeout(() => {
         copyBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> 复制完整 URL';
@@ -2671,48 +2669,22 @@ function showRotateResult(d) {
     } catch (e) { toast.error('复制失败', e.message); }
   };
 
-  // Countdown
-  const restartIn = d.restart_scheduled_in_seconds || 3;
-  let sec = restartIn + 5;  // 3s before restart + 5s restart window
-  const countdownEl = bd.querySelector('#rotate-countdown');
   const closeBtn = bd.querySelector('#rotate-close');
   const goBtn = bd.querySelector('#rotate-go');
-  const enableButtons = () => {
-    closeBtn.disabled = false;
-    closeBtn.textContent = '稍后再说';
-    closeBtn.onclick = () => {
-      bd.classList.remove('show');
-      setTimeout(() => _restoreDialogTpl(), 200);
-    };
-    goBtn.disabled = false;
-    goBtn.onclick = () => { window.location.href = '/admin/'; };
+  closeBtn.onclick = () => {
+    bd.classList.remove('show');
+    setTimeout(() => _restoreDialogTpl(), 200);
   };
-  const timer = setInterval(() => {
-    sec--;
-    if (sec > 5) {
-      countdownEl.textContent = `⏳ 服务即将重启 (${sec - 5} 秒)...`;
-    } else if (sec > 0) {
-      countdownEl.textContent = `🔄 服务重启中 (剩 ${sec} 秒)...`;
-      countdownEl.style.color = 'var(--accent)';
-    } else {
-      clearInterval(timer);
-      countdownEl.textContent = '✓ 重启完成, 旧 session 已失效, 用 Passkey 重新登录';
-      countdownEl.style.color = 'var(--success, var(--accent))';
-      enableButtons();
-    }
-  }, 1000);
+  goBtn.onclick = () => { window.location.href = newAdminUrl; };
 }
 
 async function doLogout() {
   try {
-    const r = await fetch('/admin/auth/logout', {
-      method: 'POST',
-      headers: { 'X-Admin-Token': TOKEN },
-    });
+    const r = await fetch('/auth/webauthn/logout', { method: 'POST' });
     const d = await r.json().catch(() => ({}));
     toast.success('已登出', '跳转到登录页...');
     setTimeout(() => {
-      window.location.href = d.redirect || '/admin/login';
+      window.location.href = d.redirect || LOGIN_URL;
     }, 500);
   } catch (e) {
     toast.error('登出失败', e.message);

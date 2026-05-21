@@ -33,6 +33,7 @@ from app.db.connection import connection
 SESSION_COOKIE_NAME = "proxybox_admin_session"
 SESSION_MAX_AGE = 30 * 24 * 3600
 CHALLENGE_TTL = 300
+MAX_CHALLENGES = 256
 
 # In-process challenge store. Single-worker uvicorn is fine; for multi-worker
 # scale, move to a shared store (Redis, sqlite WAL, etc.).
@@ -86,13 +87,26 @@ def _b64url_encode(b: bytes) -> str:
 # ─── Challenge store ────────────────────────────────────────────
 
 
-def _store_challenge(challenge: bytes, kind: str) -> str:
-    handle = secrets.token_urlsafe(16)
-    _challenges[handle] = {"c": challenge, "ts": int(time.time()), "k": kind}
-    now = int(time.time())
+def _purge_stale_challenges(now: int) -> None:
     for h in list(_challenges):
         if now - _challenges[h]["ts"] > CHALLENGE_TTL:
             del _challenges[h]
+
+
+def _evict_oldest_challenge() -> None:
+    if not _challenges:
+        return
+    oldest = min(_challenges, key=lambda h: _challenges[h]["ts"])
+    del _challenges[oldest]
+
+
+def _store_challenge(challenge: bytes, kind: str) -> str:
+    now = int(time.time())
+    _purge_stale_challenges(now)
+    while len(_challenges) >= MAX_CHALLENGES:
+        _evict_oldest_challenge()
+    handle = secrets.token_urlsafe(16)
+    _challenges[handle] = {"c": challenge, "ts": now, "k": kind}
     return handle
 
 

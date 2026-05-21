@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import secrets
+from pathlib import Path as FilePath
 from typing import Annotated
 
 import yaml
@@ -108,24 +109,35 @@ async def rotate_reality_keypair(body: ConfirmBody, background_tasks: Background
 @api_router.post("/rotate-admin-token")
 async def rotate_admin_token() -> dict:
     """Generate a new admin token, persist to config.yaml, invalidate current URL."""
-    path = os.environ.get("PROXYBOX_CONFIG", "/etc/proxybox/config.yaml")
+    path = FilePath(os.environ.get("PROXYBOX_CONFIG", "/etc/proxybox/config.yaml"))
     new_token = secrets.token_urlsafe(24)
 
-    with open(path) as f:
-        raw = yaml.safe_load(f) or {}
+    raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    old_token = str(raw.get("admin", {}).get("token", ""))
     raw.setdefault("admin", {})["token"] = new_token
 
-    # Atomic write so we never end up with a truncated config on disk
-    tmp = path + ".tmp"
-    with open(tmp, "w") as f:
-        yaml.dump(raw, f, default_flow_style=False, sort_keys=False)
+    # Atomic write so we never end up with a truncated config on disk. chmod
+    # both the tmp file and final path so os.replace never widens config.yaml
+    # to the process umask (often 0644), which would expose admin.token.
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    data = yaml.safe_dump(raw, default_flow_style=False, sort_keys=False, allow_unicode=True)
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(data)
     os.replace(tmp, path)
+    path.chmod(0o600)
 
     reset_settings_cache()
 
+    new_url_prefix = f"/admin/{new_token}/"
     return {
         "new_token": new_token,
-        "new_url_prefix": f"/admin/{new_token}/",
+        "new_url_prefix": new_url_prefix,
+        # Kept as a separate field so the SPA can show/copy a stable value even
+        # if future versions choose to return a fully-qualified URL here.
+        "new_admin_url": new_url_prefix,
+        "old_token_short": f"{old_token[:8]}..." if old_token else "",
+        "restart_scheduled_in_seconds": 0,
         "notice": (
             "current URL is dead — the next request must use the new prefix above. "
             "save this response before closing the window."
