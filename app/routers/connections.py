@@ -1,11 +1,11 @@
 """Live connections + throughput, proxied from sing-box's Clash API.
 
-sing-box is configured with ``experimental.clash_api.external_controller =
-127.0.0.1:9090`` (see install.sh) so the same Clash API the traffic worker
-uses for bucketing also exposes a snapshot of currently-open connections
-and instantaneous up/down bps. We do not expose the Clash API directly to
-the browser — that would bypass admin-token gating — instead we proxy it
-through this admin-gated router and aggregate per-source-IP.
+sing-box exposes a Clash-compatible API endpoint configured in
+``config.yaml``. The same Clash API the traffic worker uses for bucketing
+also exposes a snapshot of currently-open connections and instantaneous
+up/down bps. We do not expose the Clash API directly to the browser — that
+would bypass admin-token gating — instead we proxy it through this
+admin-gated router and aggregate per-source-IP.
 
 Per-device attribution: each connection's ``metadata.sourceIP`` is the
 client's public IP (the user's phone / router). The ``device`` table
@@ -30,9 +30,9 @@ from typing import Any
 from fastapi import APIRouter, Depends
 
 from app.auth.token import admin_auth
+from app.config import get_settings
 from app.db.connection import connection
 
-CLASH_API = "http://127.0.0.1:9090"
 _TIMEOUT = 2.0
 
 router = APIRouter(
@@ -50,8 +50,13 @@ def _fetch_json(path: str, *, stream: bool = False) -> dict[str, Any]:
     EOF on its own. For that case pass ``stream=True`` and we read only the
     first line, then close the socket.
     """
+    settings = get_settings()
+    headers: dict[str, str] = {}
+    if settings.clash.api_secret:
+        headers["Authorization"] = f"Bearer {settings.clash.api_secret}"
     try:
-        with urllib.request.urlopen(f"{CLASH_API}{path}", timeout=_TIMEOUT) as resp:
+        req = urllib.request.Request(f"{settings.clash.api_url}{path}", headers=headers)
+        with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
             raw = resp.readline() if stream else resp.read()
         if not raw:
             return {}

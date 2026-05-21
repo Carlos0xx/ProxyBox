@@ -5,13 +5,64 @@ Linux-only — every probe degrades gracefully on missing files / tools.
 
 from __future__ import annotations
 
+import json
+import os
+import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 from app.services.shell import run
 
 
+def runtime_is_docker() -> bool:
+    return os.environ.get("PROXYBOX_RUNTIME") == "docker"
+
+
 def systemctl_is_active(unit: str) -> str:
+    if runtime_is_docker():
+        return _docker_service_state(unit)
     return run(["systemctl", "is-active", unit]).strip() or "unknown"
+
+
+def _docker_service_state(unit: str) -> str:
+    if unit == "proxybox-admin":
+        return "active"
+    if unit == "proxybox-traffic-worker":
+        return _heartbeat_state()
+    if unit == "sing-box":
+        return _clash_api_state()
+    return "unknown"
+
+
+def _heartbeat_state() -> str:
+    raw_path = os.environ.get("PROXYBOX_TRAFFIC_HEARTBEAT")
+    if not raw_path:
+        return "unknown"
+    path = Path(raw_path)
+    try:
+        age = time.time() - path.stat().st_mtime
+    except OSError:
+        return "activating"
+    return "active" if age <= 45 else "failed"
+
+
+def _clash_api_state() -> str:
+    try:
+        from app.config import get_settings
+
+        settings = get_settings()
+        headers: dict[str, str] = {}
+        if settings.clash.api_secret:
+            headers["Authorization"] = f"Bearer {settings.clash.api_secret}"
+        req = urllib.request.Request(f"{settings.clash.api_url}/connections", headers=headers)
+        with urllib.request.urlopen(req, timeout=2) as r:
+            json.load(r)
+        return "active"
+    except urllib.error.HTTPError as e:
+        return "active" if e.code in {401, 403} else "failed"
+    except Exception:
+        return "failed"
 
 
 def loadavg() -> list[str]:
@@ -22,10 +73,39 @@ def loadavg() -> list[str]:
 
 
 def uptime_pretty() -> str:
-    return run(["uptime", "-p"]).strip()
+    out = run(["uptime", "-p"]).strip()
+    if out:
+        return out
+    try:
+        seconds = int(float(Path("/proc/uptime").read_text().split()[0]))
+    except (OSError, IndexError, ValueError):
+        return ""
+    days, rem = divmod(seconds, 86400)
+    hours, rem = divmod(rem, 3600)
+    minutes = rem // 60
+    parts: list[str] = []
+    if days:
+        parts.append(f"{days} day{'s' if days != 1 else ''}")
+    if hours:
+        parts.append(f"{hours} hour{'s' if hours != 1 else ''}")
+    if minutes or not parts:
+        parts.append(f"{minutes} minute{'s' if minutes != 1 else ''}")
+    return "up " + ", ".join(parts[:2])
 
 
 def mem_stats() -> dict[str, float | int]:
+    try:
+        meminfo: dict[str, int] = {}
+        for line in Path("/proc/meminfo").read_text().splitlines():
+            key, value = line.split(":", 1)
+            meminfo[key] = int(value.split()[0])
+        total = max(1, meminfo["MemTotal"] // 1024)
+        available = meminfo.get("MemAvailable", 0) // 1024
+        used = max(0, total - available)
+        return {"used_mb": used, "total_mb": total, "pct": round(used * 100 / total, 1)}
+    except (OSError, KeyError, IndexError, ValueError):
+        pass
+
     out = run(["free", "-m"])
     used, total = 0, 1
     for line in out.splitlines():

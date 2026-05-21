@@ -10,15 +10,42 @@ For a higher-level walkthrough of day-to-day operations after install, see [`gui
 
 | Requirement | Detail |
 | --- | --- |
-| **OS** | Debian 12 / 13 or Ubuntu 22.04 / 24.04 / 26.04 — clean install. |
-| **Access** | Root SSH (the installer uses `apt` + `systemctl`). |
+| **OS** | Debian / Ubuntu VPS. Docker path can run on an existing host. Native path still expects a clean VPS. |
+| **Access** | Root SSH or passwordless sudo. The Docker installer installs/starts Docker and Compose if missing. |
 | **Resources** | ≥ 1 GB RAM · ≥ 5 GB free disk. |
-| **Required ports** | `8080/tcp` (admin) · `11000-11050/tcp` (VLESS) · `21000-21050/udp` (Hysteria2). |
+| **Required ports** | Docker installer auto-selects free Admin, VLESS, and Hy2 ports and writes them to `.env`. |
 | **For HTTPS later** | A domain pointing at the VPS · `80/tcp` + `443/tcp` open. Optional but recommended for production. |
 
 ---
 
-## Path 1 — Claude Code / Codex &nbsp;<sub>(recommended)</sub>
+## Path 1 — Docker install &nbsp;<sub>(recommended)</sub>
+
+```bash
+ssh root@<your-vps>
+apt-get update && apt-get install -y git curl ca-certificates
+git clone https://github.com/carlos0xx/proxybox /opt/proxybox
+cd /opt/proxybox
+bash deploy/docker-install.sh
+```
+
+`deploy/docker-install.sh` checks Docker/Compose and `ss`/`iproute2`, installs missing runtime packages, starts the Docker service, scans host ports, prints/writes the selected ports to `.env`, and starts an isolated bridge-network stack. Every run creates a new Compose project and new Docker volumes, so credentials, keys, login paths, and subscription URLs are regenerated without deleting older ProxyBox projects. It does not install Python 3.11, write ProxyBox systemd units, enable fail2ban, configure Caddy, touch SSH known_hosts, or change unrelated services on the host.
+
+> [!IMPORTANT]
+> Installation red line: never delete files or services on the user's VPS. Installers and deploy agents may only touch ProxyBox resources created for this install, and must not touch any user data, files, services, containers, or volumes outside this install. On conflicts, pick different ports, create a new isolated instance, or fail clearly.
+
+To upgrade the current project in place instead of creating a fresh project:
+
+```bash
+cd /opt/proxybox
+git pull
+PROXYBOX_UPGRADE=1 bash deploy/docker-install.sh
+```
+
+Full reference: [`deploy/docker.md`](./deploy/docker.md).
+
+---
+
+## Path 2 — Claude Code / Codex
 
 Let an AI coding agent drive the install over SSH. Lowest-friction option if you already have Claude Code or Codex open.
 
@@ -33,7 +60,7 @@ Then in any session:
 
 > deploy proxybox on my VPS at 1.2.3.4 using ~/.ssh/id_ed25519
 
-The agent uses an auto-deleted temporary SSH `known_hosts`, runs a minimal VPS check, clones or updates the repo on the VPS, runs `deploy/check-prereqs.sh --install` to provision Python 3.11 and runtime deps, executes `install.sh --fresh`, verifies the four core services, and relays the **login URL, username, password, and 5 subscription URLs** back to you.
+The agent uses an auto-deleted temporary SSH `known_hosts`, runs a minimal VPS check, clones or updates the repo on the VPS, runs the Docker port pre-flight, executes `deploy/docker-install.sh`, verifies the core services, and relays the **login URL, username, password, and first device status** back to you.
 
 For **Codex** or other coding agents, point them at [`deploy/claude-skill/SKILL.md`](../deploy/claude-skill/SKILL.md) — the instructions are framework-agnostic.
 
@@ -41,7 +68,7 @@ Full reference: [`deploy/claude-skill.md`](./deploy/claude-skill.md).
 
 ---
 
-## Path 2 — `install.sh` &nbsp;<sub>(Debian / Ubuntu VPS)</sub>
+## Path 3 — `install.sh` &nbsp;<sub>(advanced native mode)</sub>
 
 ```bash
 ssh root@<your-vps>
@@ -73,36 +100,9 @@ Full reference: [`deploy/install-sh.md`](./deploy/install-sh.md).
 
 ---
 
-## Path 3 — Docker Compose
-
-```bash
-git clone https://github.com/carlos0xx/proxybox && cd proxybox
-docker compose up -d
-docker compose exec proxybox-admin \
-    sh -c 'cat /etc/proxybox/admin.password; grep -E "username|login_path" /etc/proxybox/config.yaml'
-```
-
-A one-shot `bootstrap` container generates `config.yaml` on first start. Volumes preserve state across `docker compose down`/`up`; stop the stack, then use `PROXYBOX_FRESH=1 docker compose up -d` to clear old ProxyBox volumes before bootstrap.
-
-To also run the Telegram bot:
-
-```bash
-# fill BOT_TOKEN + TG_ALLOWED_USERS into /etc/proxybox/bot.env first
-docker compose --profile bot up -d proxybox-bot
-```
-
-| Limitation | Workaround |
-| --- | --- |
-| No fail2ban (host iptables not exposed to containers). | Use the host firewall + your provider's edge filter. |
-| No automatic Caddy / HTTPS provisioning. | Pair with an external Caddy / nginx / Cloudflare Tunnel in front of port 8080. |
-
-Full reference: [`deploy/docker.md`](./deploy/docker.md).
-
----
-
 ## First-time login
 
-1. **Open the login URL** the installer printed — `http://<your-vps>:8080/login/<random-12char>`.
+1. **Open the login URL** the installer printed — `http://<your-vps>:<admin-port>/login/<random-12char>`.
 
    > [!NOTE]
    > `/login` alone returns **404**. The random suffix is by design — it stops bots that brute-force common paths from even confirming a form exists.
