@@ -58,7 +58,7 @@ git clone https://github.com/carlos0xx/proxybox /opt/proxybox
 cd /opt/proxybox && bash deploy/install.sh --fresh --lang zh
 ```
 
-fresh 模式会先清理 ProxyBox 自己管理的旧配置、旧数据、旧订阅和旧服务文件,再生成新的 Reality 密钥对、Hy2 证书、16 位随机 admin 密码和泛化默认设备。只有明确要保留旧 ProxyBox 安装时才去掉 `--fresh`。
+fresh 模式会先清理 ProxyBox 自己管理的旧配置、旧数据、旧订阅和旧服务文件,再生成新的 Reality 密钥对、Hy2 证书、16 位随机 admin 密码和 5 位小写随机设备名。只有明确要保留旧 ProxyBox 安装时才去掉 `--fresh`。
 
 ### 方式 C · Docker Compose
 

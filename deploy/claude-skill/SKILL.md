@@ -193,9 +193,9 @@ handoff block:
     against /login bot scans)
   - `用户名    admin`
   - `密  码    <16-char alnum>`
-- The auto-created first device (default name `device-1`, override via env
-  `PROXYBOX_FIRST_DEVICE=<name>` before running install.sh; set it to an empty
-  string to skip auto-creation)
+- The auto-created first device (default name is 5 random lowercase letters,
+  override via env `PROXYBOX_FIRST_DEVICE=<name>` before running install.sh;
+  set it to an empty string to skip auto-creation)
 - All 5 per-device subscription URLs ready to copy
 
 **Do not re-mask the credentials in chat output for this skill.** The
@@ -277,7 +277,7 @@ Concretely, the user can:
 4. **Traffic should flow** through the VPS — `ifconfig.me` from the
    client device shows the VPS IP, not the home ISP.
 
-The default first device is named `device-1`. Override via env
+The default first device name is 5 random lowercase letters. Override via env
 `PROXYBOX_FIRST_DEVICE=tablet-1 bash deploy/install.sh ...` before install, or
 rename in the admin UI afterwards. `PROXYBOX_FIRST_DEVICE=` skips auto-creation.
 `PROXYBOX_FIRST_DEVICE=local-user` is supported only when the user explicitly
@@ -301,7 +301,7 @@ handoff. v0.1.6+ exposes a lot in the panel:
   immediately 404s; existing sessions unaffected. Defends against
   `/login` brute-force.
 - **Add more devices:** 设备管理 → 生成. Generic naming convention:
-  `device-1`, `phone-2`, `tablet-1`, `laptop-1`, `home-router`. **Never
+  `phone-2`, `tablet-1`, `laptop-1`, `home-router`, or lowercase random strings. **Never
   use personal identifiers** — device names land in sing-box config
   + subscription file content, so they're surface for fingerprinting.
 - **Per-device subscription URLs (all 5 formats):** 订阅链接 page or

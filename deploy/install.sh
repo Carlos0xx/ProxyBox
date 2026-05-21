@@ -591,7 +591,14 @@ fi
 # Wait for proxybox-admin to be reachable on localhost (sleep 3 above
 # is usually enough on a real VPS, but be defensive on slow hosts).
 resolve_first_device_name() {
-    local raw="${PROXYBOX_FIRST_DEVICE-device-1}"
+    local raw
+    if [ "${PROXYBOX_FIRST_DEVICE+x}" = x ]; then
+        raw="$PROXYBOX_FIRST_DEVICE"
+    else
+        .venv/bin/python -c "import secrets, string; print(''.join(secrets.choice(string.ascii_lowercase) for _ in range(5)))"
+        return
+    fi
+
     case "$raw" in
         local-user|@local-user|auto-user)
             raw="${PROXYBOX_LOCAL_USERNAME:-${SUDO_USER:-${USER:-${LOGNAME:-}}}}"
@@ -612,7 +619,7 @@ if len(name) < 3:
     name = f'device-{name}'
 name = name[:32].strip('-_')
 if len(name) < 3:
-    name = 'device-1'
+    name = 'device'
 print(name)
 "
 }

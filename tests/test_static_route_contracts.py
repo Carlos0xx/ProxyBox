@@ -27,6 +27,9 @@ def test_admin_token_rotation_dialog_uses_returned_contract() -> None:
 
 def test_service_restart_icon_has_explicit_size_guard() -> None:
     assert "svc-restart-icon" in STATIC_HTML
-    assert 'width="12" height="12"' in STATIC_HTML
+    assert '<span class="svc-restart-icon" aria-hidden="true">↻</span>' in STATIC_HTML
+    assert '<svg class="svc-restart-icon"' not in STATIC_HTML
     assert ".btn-svc-restart .svc-restart-icon" in STATIC_HTML
     assert "max-width: 12px" in STATIC_HTML
+    assert "min-height: 12px" in STATIC_HTML
+    assert "font-size: 12px" in STATIC_HTML

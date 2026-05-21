@@ -58,7 +58,7 @@ git clone https://github.com/carlos0xx/proxybox /opt/proxybox
 cd /opt/proxybox && bash deploy/install.sh --fresh
 ```
 
-Fresh mode clears old ProxyBox-managed state first, then generates a Reality keypair, Hy2 cert, random 16-char admin password, and a generic first device. Omit `--fresh` only when intentionally preserving an existing ProxyBox install.
+Fresh mode clears old ProxyBox-managed state first, then generates a Reality keypair, Hy2 cert, random 16-char admin password, and a random five-letter first device. Omit `--fresh` only when intentionally preserving an existing ProxyBox install.
 
 ### C · Docker Compose
 

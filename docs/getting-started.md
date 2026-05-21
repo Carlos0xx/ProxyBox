@@ -59,7 +59,7 @@ Fresh mode clears old ProxyBox-managed state first. It performs:
 4. **Crypto generation** — Reality keypair, Hy2 self-signed cert, random SNI picked per install.
 5. **Config writes** — `/etc/sing-box/config.json` and `/etc/proxybox/config.yaml` (mode 0600, root-owned).
 6. **systemd units** — `sing-box`, `proxybox-admin`, `proxybox-traffic-worker`, `proxybox-bot` (bot stays disabled until configured).
-7. **Auto-create the first device** — default name `device-1` (override with env var `PROXYBOX_FIRST_DEVICE=<name>`, or set it empty to skip).
+7. **Auto-create the first device** — default name is 5 random lowercase letters (override with env var `PROXYBOX_FIRST_DEVICE=<name>`, or set it empty to skip).
 8. **Print the handoff** — the login URL, username, password, and 5 subscription URLs in a single self-contained block.
 
 > [!IMPORTANT]
@@ -109,7 +109,7 @@ Full reference: [`deploy/docker.md`](./deploy/docker.md).
 
 2. **Enter `admin` + the printed password.** A session cookie is set for 30 days; you land in the SPA.
 
-3. **The first device is already created** (`device-1` by default). Open the **Endpoints** page from the side nav. Five URLs are listed:
+3. **The first device is already created** (5 random lowercase letters by default). Open the **Endpoints** page from the side nav. Five URLs are listed:
 
    | Format | Best for |
    | --- | --- |

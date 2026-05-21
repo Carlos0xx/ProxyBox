@@ -101,7 +101,7 @@ http://<your-vps>:8080/login/<random-12-char-suffix>
 
 Enter `admin` + the printed password. A 30-day session cookie is set; you land in the SPA.
 
-The auto-created **`device-1`** device is already in the **Devices** page. The five subscription URLs are in **Endpoints**:
+The auto-created first device uses a **5-letter random lowercase name** and is already in the **Devices** page. The five subscription URLs are in **Endpoints**:
 
 | Format | Best for |
 | --- | --- |
@@ -124,7 +124,7 @@ All from the panel — no SSH needed for anything below.
 
 | Task | Where | Notes |
 | --- | --- | --- |
-| **Add a device** | Devices → New | Use generic names (`device-1`, `tablet-1`, `home-router`). Avoid personal names — they bleed into sing-box config and sub files. |
+| **Add a device** | Devices → New | Use generic names (`tablet-1`, `home-router`) or random lowercase strings. Avoid personal names — they bleed into sing-box config and sub files. |
 | **Rotate a leaked URL** | Devices → 🔄 New URL | `sub_token` rotates; UUID + ports unchanged. Client re-imports once. |
 | **Pause a device** | Devices → ⏸ Pause | Indefinite or until a timestamp. Inbound removed; traffic history preserved. |
 | **Change password / username** | Security → Login → Edit | Requires the current password (defends against session-hijack re-auth). |
@@ -250,7 +250,7 @@ http://<你的-VPS>:8080/login/<12 位随机串>
 
 输 `admin` + 打印的密码。30 天 session cookie 设上,进 SPA。
 
-自动建好的 **`device-1`** 设备已经在 **设备管理** 里。**订阅链接** 页有 5 种格式:
+自动建好的第一台设备会使用 **5 位小写随机名**,已经在 **设备管理** 里。**订阅链接** 页有 5 种格式:
 
 | 格式 | 适合 |
 | --- | --- |
@@ -270,7 +270,7 @@ http://<你的-VPS>:8080/login/<12 位随机串>
 
 | 任务 | 在哪 | 说明 |
 | --- | --- | --- |
-| **加新设备** | 设备管理 → 生成 | 用泛化命名 (`device-1`、`tablet-1`、`home-router`)。**不要用个人名字** —— 设备名会进 sing-box 配置和订阅文件,算指纹面。 |
+| **加新设备** | 设备管理 → 生成 | 用泛化命名 (`tablet-1`、`home-router`) 或小写随机串。**不要用个人名字** —— 设备名会进 sing-box 配置和订阅文件,算指纹面。 |
 | **轮换泄漏的 URL** | 设备管理 → 🔄 换 URL | `sub_token` 变了;UUID + 端口不变。客户端重新导入一次。 |
 | **暂停设备** | 设备管理 → ⏸ 暂停 | 选无限期或定时间。inbound 移除,历史流量保留。 |
 | **改密码 / 用户名** | 安全 → 登录设置 → 修改 | 改密码需先输当前密码 (防 session 被劫后立刻被改密)。 |

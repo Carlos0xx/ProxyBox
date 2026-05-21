@@ -115,7 +115,7 @@ Single SQLite file at `/var/lib/proxybox/traffic.db`, WAL mode, four tables.
 
 ```sql
 CREATE TABLE device (
-  name          TEXT     PRIMARY KEY,    -- "device-1", "laptop-1", etc.
+  name          TEXT     PRIMARY KEY,    -- "abcde", "laptop-1", etc.
   label         TEXT     NOT NULL,        -- human-friendly display name
   kind          TEXT     NOT NULL,        -- "mobile" / "desktop" / "router"
   vless_uuid    TEXT     NOT NULL,        -- 128-bit RFC 4122 v4

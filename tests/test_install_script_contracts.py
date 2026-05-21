@@ -19,7 +19,9 @@ def test_installer_bootstraps_first_device_with_login_session() -> None:
     assert '-b "$COOKIE_JAR"' in INSTALL_SH
     assert 'api_get "/api/devices/list"' in INSTALL_SH
     assert 'api_post_json "/api/devices/new"' in INSTALL_SH
-    assert "PROXYBOX_FIRST_DEVICE-device-1" in INSTALL_SH
+    assert "string.ascii_lowercase" in INSTALL_SH
+    assert "for _ in range(5)" in INSTALL_SH
+    assert "PROXYBOX_FIRST_DEVICE-device-1" not in INSTALL_SH
     assert "M_BOOTSTRAP_SKIP" in INSTALL_SH
     assert "local-user|@local-user|auto-user" in INSTALL_SH
 

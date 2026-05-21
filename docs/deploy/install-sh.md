@@ -26,7 +26,7 @@ changes.
 | `--reuse` / `--no-fresh` | Keep existing ProxyBox state. This is the default for manual reruns and upgrades. |
 | `--lang en` / `--lang zh` | Force language. Default: auto-detect from `$LANG`. |
 | `-h` / `--help` | Print the header comment and exit. |
-| `PROXYBOX_FIRST_DEVICE=<name>` *(env)* | Override the auto-created first device (default `device-1`). Set it to an empty string to skip auto-creation. |
+| `PROXYBOX_FIRST_DEVICE=<name>` *(env)* | Override the auto-created first device (default: 5 random lowercase letters). Set it to an empty string to skip auto-creation. |
 | `PROXYBOX_FIRST_DEVICE=local-user` *(env)* | Opt-in username-based device name. Uses `PROXYBOX_LOCAL_USERNAME` if set, otherwise the remote shell user, then sanitizes it. |
 | `PROXYBOX_LANG=<en\|zh>` *(env)* | Same as `--lang`. |
 
@@ -71,7 +71,7 @@ sudo bash deploy/check-prereqs.sh --install  # also apt-install missing apt deps
 | 8 | **fail2ban `[manual]` jail** in `/etc/fail2ban/jail.d/proxybox.local` with `backend=systemd`, plus an `sshd` backend override so minimal images without `/var/log/auth.log` do not fail. |
 | 9 | **Four systemd units** — `proxybox-admin`, `proxybox-traffic-worker`, `proxybox-bot` (disabled by default). |
 | 10 | `systemctl enable --now` for core services. |
-| 11 | **Auto-creates the first device** (`device-1` by default; override with `PROXYBOX_FIRST_DEVICE`; set it empty to skip) by logging in with the generated username/password and using that session cookie. |
+| 11 | **Auto-creates the first device** (5 random lowercase letters by default; override with `PROXYBOX_FIRST_DEVICE`; set it empty to skip) by logging in with the generated username/password and using that session cookie. |
 | 12 | **Self-contained handoff** — login URL, username, password, 5 subscription URLs in a single coloured block. |
 
 > [!IMPORTANT]
