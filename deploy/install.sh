@@ -11,6 +11,8 @@
 # Idempotent: re-running it on an existing install does nothing destructive,
 # only fills in missing pieces. Safe to run repeatedly.
 # Fresh mode: --fresh or PROXYBOX_FRESH=1 removes ProxyBox-managed state first.
+# Installation red line: never delete or modify user files/services outside
+# this ProxyBox install. On non-dedicated VPS hosts, use Docker install.
 
 set -euo pipefail
 ORIG_ARGS=("$@")

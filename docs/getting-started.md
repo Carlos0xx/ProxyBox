@@ -30,6 +30,9 @@ bash deploy/docker-install.sh
 
 `deploy/docker-install.sh` checks Docker/Compose and `ss`/`iproute2`, installs missing runtime packages, starts the Docker service, scans host ports, prints/writes the selected ports to `.env`, and starts an isolated bridge-network stack. Every run creates a new Compose project and new Docker volumes, so credentials, keys, login paths, and subscription URLs are regenerated without deleting older ProxyBox projects. It does not install Python 3.11, write ProxyBox systemd units, enable fail2ban, configure Caddy, touch SSH known_hosts, or change unrelated services on the host.
 
+> [!IMPORTANT]
+> Installation red line: never delete files or services on the user's VPS. Installers and deploy agents may only touch ProxyBox resources created for this install, and must not touch any user data, files, services, containers, or volumes outside this install. On conflicts, pick different ports, create a new isolated instance, or fail clearly.
+
 To upgrade the current project in place instead of creating a fresh project:
 
 ```bash

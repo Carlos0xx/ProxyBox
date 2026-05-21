@@ -302,6 +302,11 @@ phones and laptops — Clash YAML is mainly for routers and Stash power-users.
 
 ## Anti-patterns (do NOT do these)
 
+- **Installation red line:** never delete files or services on the user's VPS.
+  The deploy flow may only touch ProxyBox resources created for this install,
+  and must not touch any user data, files, services, containers, or volumes
+  outside this install. On conflicts, pick different ports, create a new
+  isolated instance, or fail clearly.
 - **The Docker bootstrap output IS the user's handoff** — relay it verbatim
   including the login URL + username + password (bold red in the
   summary). Re-masking defeats v0.1.6+'s one-shot UX. But ad-hoc bash

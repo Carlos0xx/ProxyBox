@@ -2,6 +2,9 @@
 
 > 推荐路径。Docker stack 使用 bridge 网络隔离,自动挑选空闲宿主端口,不写宿主机 Python、systemd、fail2ban、Caddy 或 SSH known_hosts。
 
+> [!IMPORTANT]
+> 安装红线: 不要删除用户 VPS 上任何文件和服务。安装器和部署代理只能碰本次安装新建的 ProxyBox 资源,绝不能碰本次安装以外任何用户数据、文件、服务、容器或 volume。遇到冲突只能自动换端口、新建隔离实例,或明确报错。
+
 ## 快速开始
 
 ```bash

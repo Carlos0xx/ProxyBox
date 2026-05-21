@@ -47,6 +47,9 @@ cd /opt/proxybox && bash deploy/docker-install.sh
 
 `deploy/docker-install.sh` installs/starts Docker, Compose, and the port scanner if missing, scans host ports, keeps the defaults when free, otherwise picks a free admin port and free VLESS/Hy2 port blocks, then prints and writes them to `.env`. Every installer run creates a new isolated Compose project name and new Docker volumes, so admin paths, passwords, keys, and subscription URLs are regenerated without deleting any older ProxyBox projects. The stack uses Docker bridge networking and only publishes those selected ports; it does not install or rewrite host Python, ProxyBox systemd units, fail2ban, Caddy, SSH known_hosts, or unrelated services. If the device list is empty, it auto-creates one random five-letter lowercase device.
 
+> [!IMPORTANT]
+> Installation red line: never delete files or services on the user's VPS. Installers and deploy agents may only touch ProxyBox resources created for this install, and must not touch any user data, files, services, containers, or volumes outside this install. On conflicts, pick different ports, create a new isolated instance, or fail clearly.
+
 To upgrade the current project in place instead of creating a fresh project:
 
 ```bash

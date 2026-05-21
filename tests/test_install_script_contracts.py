@@ -63,6 +63,7 @@ def test_installer_has_explicit_fresh_mode_without_touching_ssh_trust() -> None:
     assert "/etc/systemd/system/proxybox-traffic-worker.service" in INSTALL_SH
     assert "/etc/fail2ban/jail.d/proxybox-manual.conf" in INSTALL_SH
     assert "~/.ssh/known_hosts" not in INSTALL_SH
+    assert "Installation red line: never delete or modify user files/services outside" in INSTALL_SH
 
 
 def test_installer_rewrites_managed_systemd_units() -> None:
@@ -99,3 +100,9 @@ def test_deploy_skill_uses_session_local_known_hosts() -> None:
     assert "ssh-keyscan" not in DEPLOY_SKILL
     assert "ssh-keygen -lf" not in DEPLOY_SKILL
     assert "StrictHostKeyChecking=no" in DEPLOY_SKILL
+
+
+def test_deploy_skill_enforces_vps_data_red_line() -> None:
+    assert "Installation red line:" in DEPLOY_SKILL
+    assert "never delete files or services on the user's VPS" in DEPLOY_SKILL
+    assert "must not touch any user data, files, services, containers, or volumes" in DEPLOY_SKILL

@@ -14,6 +14,8 @@ from app.services import caddy, fail2ban, singbox, system_stats
 ROOT = Path(__file__).resolve().parents[1]
 COMPOSE = (ROOT / "docker-compose.yml").read_text()
 DOCKER_INSTALL = (ROOT / "deploy" / "docker-install.sh").read_text()
+README_ZH = (ROOT / "README.zh.md").read_text()
+DOCKER_DOC = (ROOT / "docs" / "deploy" / "docker.md").read_text()
 STATIC_HTML = (ROOT / "static" / "index.html").read_text()
 
 
@@ -62,6 +64,16 @@ def test_docker_install_provisions_runtime_and_scans_ports() -> None:
     assert "docker compose down" not in DOCKER_INSTALL
     assert "docker volume rm" not in DOCKER_INSTALL
     assert "rm -rf" not in DOCKER_INSTALL
+
+
+def test_install_red_line_is_documented_for_docker_path() -> None:
+    red_line = "安装红线: 不要删除用户 VPS 上任何文件和服务"
+    scope = "绝不能碰本次安装以外任何用户数据、文件、服务、容器或 volume"
+
+    assert red_line in README_ZH
+    assert scope in README_ZH
+    assert red_line in DOCKER_DOC
+    assert scope in DOCKER_DOC
 
 
 def test_bootstrap_uses_docker_env_ports(monkeypatch, tmp_path: Path) -> None:
