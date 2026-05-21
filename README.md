@@ -36,16 +36,25 @@
 
 ## Install
 
-### A · Docker install *(recommended)*
+### A · Interactive install *(Docker recommended)*
 
 ```bash
 ssh root@<your-vps>
 apt-get update && apt-get install -y git curl ca-certificates
 git clone https://github.com/carlos0xx/proxybox /opt/proxybox
-cd /opt/proxybox && bash deploy/docker-install.sh
+cd /opt/proxybox && bash deploy/install.sh
 ```
 
-`deploy/docker-install.sh` installs/starts Docker, Compose, and the port scanner if missing, scans host ports, keeps the defaults when free, otherwise picks a free admin port and free VLESS/Hy2 port blocks, then prints and writes them to `.env`. Every installer run creates a new isolated Compose project name and new Docker volumes, so admin paths, passwords, keys, and subscription URLs are regenerated without deleting any older ProxyBox projects. The stack uses Docker bridge networking and only publishes those selected ports; it does not install or rewrite host Python, ProxyBox systemd units, fail2ban, Caddy, SSH known_hosts, or unrelated services. If the device list is empty, it auto-creates one random five-letter lowercase device.
+Running `deploy/install.sh` without arguments shows a Chinese mode picker for **Docker install** or **native install**. Press Enter for Docker: container isolation, automatic port selection, and no host systemd/fail2ban/Caddy writes. If the VPS already runs websites, panels, or production services, use Docker. Native install writes Python, sing-box, systemd units, and fail2ban directly to the host; only use it on a clean dedicated VPS.
+
+Direct mode selection:
+
+```bash
+bash deploy/install.sh --docker
+bash deploy/install.sh --native --fresh --lang zh
+```
+
+Docker install provisions Docker/Compose and the port scanner if missing, scans host ports, writes `.env`, and creates fresh Compose project volumes, credentials, keys, and subscription URLs without deleting any older ProxyBox project.
 
 > [!IMPORTANT]
 > Installation red line: never delete files or services on the user's VPS. Installers and deploy agents may only touch ProxyBox resources created for this install, and must not touch any user data, files, services, containers, or volumes outside this install. On conflicts, pick different ports, create a new isolated instance, or fail clearly.
@@ -71,13 +80,13 @@ Then in any session: *"deploy proxybox on my VPS at 1.2.3.4 using ~/.ssh/id_ed25
 
 For Codex or other agents, point them at [`deploy/claude-skill/SKILL.md`](./deploy/claude-skill/SKILL.md) — the instructions are framework-agnostic.
 
-### C · `install.sh` *(advanced native mode)*
+### C · Native install *(advanced mode)*
 
 ```bash
 ssh root@<your-vps>
 apt-get update && apt-get install -y git curl ca-certificates
 git clone https://github.com/carlos0xx/proxybox /opt/proxybox
-cd /opt/proxybox && bash deploy/install.sh --fresh
+cd /opt/proxybox && bash deploy/install.sh --native --fresh
 ```
 
 Fresh mode clears old ProxyBox-managed state first, then generates a Reality keypair, Hy2 cert, random 16-char admin password, and a random five-letter first device. Omit `--fresh` only when intentionally preserving an existing ProxyBox install.

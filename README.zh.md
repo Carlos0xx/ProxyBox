@@ -36,16 +36,25 @@
 
 ## 安装
 
-### 方式 A · Docker 默认安装 *(推荐)*
+### 方式 A · 交互式安装 *(默认推荐 Docker)*
 
 ```bash
 ssh root@<你的-vps>
 apt-get update && apt-get install -y git curl ca-certificates
 git clone https://github.com/carlos0xx/proxybox /opt/proxybox
-cd /opt/proxybox && bash deploy/docker-install.sh
+cd /opt/proxybox && bash deploy/install.sh
 ```
 
-`deploy/docker-install.sh` 会在缺失时自动安装/启动 Docker、Compose 和端口检测工具,然后扫描宿主机端口:默认端口没被占用就用默认值,被占用就自动挑一组空闲端口并打印/写入 `.env`。每次运行安装器都会生成新的 Compose project name 和新的 Docker volumes,所以管理路径、密码、密钥、订阅地址都会重新生成,同时不会删除任何旧 ProxyBox 项目。Docker stack 使用 bridge 网络,只发布被选中的端口,不会安装或改写宿主机 Python、ProxyBox systemd unit、fail2ban、Caddy、SSH known_hosts 或无关服务。设备列表为空时,安装器会自动创建一个 5 位小写随机设备名。
+无参数运行 `deploy/install.sh` 会用中文提示选择 **Docker 安装** 或 **宿主机安装**。默认回车选择 Docker:容器隔离、自动避开已占用端口、不写宿主机 systemd/fail2ban/Caddy。如果 VPS 里已经有其他服务、网站、面板或生产系统,强烈推荐 Docker。宿主机安装会直接安装 Python、sing-box、systemd unit、fail2ban,仅建议用于干净、专用、不跑其他生产服务的 VPS。
+
+直接指定方式:
+
+```bash
+bash deploy/install.sh --docker
+bash deploy/install.sh --native --fresh --lang zh
+```
+
+Docker 安装会在缺失时自动安装/启动 Docker、Compose 和端口检测工具,然后扫描宿主机端口:默认端口没被占用就用默认值,被占用就自动挑一组空闲端口并打印/写入 `.env`。每次运行都会生成新的 Compose project name 和新的 Docker volumes,所以管理路径、密码、密钥、订阅地址都会重新生成,同时不会删除任何旧 ProxyBox 项目。
 
 > [!IMPORTANT]
 > 安装红线: 不要删除用户 VPS 上任何文件和服务。安装器和部署代理只能碰本次安装新建的 ProxyBox 资源,绝不能碰本次安装以外任何用户数据、文件、服务、容器或 volume。遇到冲突只能自动换端口、新建隔离实例,或明确报错。
@@ -71,13 +80,13 @@ cp -r deploy/claude-skill/* ~/.claude/skills/proxybox-deploy/
 
 Codex 或其他代理:直接把 [`deploy/claude-skill/SKILL.md`](./deploy/claude-skill/SKILL.md) 喂给它 —— 指令是通用的,不绑 Claude Code。
 
-### 方式 C · `install.sh` *(裸机高级模式)*
+### 方式 C · 宿主机安装 *(高级模式)*
 
 ```bash
 ssh root@<你的-vps>
 apt-get update && apt-get install -y git curl ca-certificates
 git clone https://github.com/carlos0xx/proxybox /opt/proxybox
-cd /opt/proxybox && bash deploy/install.sh --fresh --lang zh
+cd /opt/proxybox && bash deploy/install.sh --native --fresh --lang zh
 ```
 
 fresh 模式会先清理 ProxyBox 自己管理的旧配置、旧数据、旧订阅和旧服务文件,再生成新的 Reality 密钥对、Hy2 证书、16 位随机 admin 密码和 5 位小写随机设备名。只有明确要保留旧 ProxyBox 安装时才去掉 `--fresh`。

@@ -41,21 +41,21 @@ It accounts traffic per device, classifies destination hosts (Video / Social / A
 
 | Path | Best for | Reference |
 | --- | --- | --- |
-| **A · Docker install** *(recommended)* | Existing or clean Debian/Ubuntu VPS | [`deploy/docker.md`](./deploy/docker.md) |
+| **A · Interactive install** *(Docker recommended)* | Existing or clean Debian/Ubuntu VPS | [`deploy/docker.md`](./deploy/docker.md) |
 | **B · Claude Code / Codex** | Users with an AI coding agent | [`deploy/claude-skill.md`](./deploy/claude-skill.md) |
 | **C · `install.sh`** | Clean Debian/Ubuntu VPS needing host fail2ban/Caddy | [`deploy/install-sh.md`](./deploy/install-sh.md) |
 
-#### Path A — Docker install *(recommended)*
+#### Path A — Interactive install *(Docker recommended)*
 
 ```bash
 ssh root@<your-vps>
 apt-get update && apt-get install -y git curl ca-certificates
 git clone https://github.com/carlos0xx/proxybox /opt/proxybox
 cd /opt/proxybox
-bash deploy/docker-install.sh
+bash deploy/install.sh
 ```
 
-The installer checks Docker/Compose and `ss`/`iproute2`, installs missing runtime packages, starts the Docker service, scans host ports, prints/writes a fresh isolated Compose project to `.env`, and starts a bridge-network stack. Each installer run creates new ProxyBox Docker volumes and new credentials/subscription URLs without deleting any older ProxyBox projects. It does not install Python 3.11, write ProxyBox systemd units, enable fail2ban, configure Caddy, touch SSH known_hosts, or change unrelated host services.
+The installer shows a Chinese mode picker. Press Enter for Docker, which checks Docker/Compose and `ss`/`iproute2`, installs missing runtime packages, starts Docker, scans host ports, prints/writes a fresh isolated Compose project to `.env`, and starts a bridge-network stack. If the VPS already runs websites, panels, or production services, choose Docker. Native install writes Python, sing-box, systemd units, and fail2ban directly to the host; only use it on a clean dedicated VPS.
 
 > **Installation red line:** never delete files or services on the user's VPS. Installers and deploy agents may only touch ProxyBox resources created for this install, and must not touch any user data, files, services, containers, or volumes outside this install.
 
@@ -81,7 +81,7 @@ ssh root@<your-vps>
 apt-get update && apt-get install -y git curl ca-certificates
 git clone https://github.com/carlos0xx/proxybox /opt/proxybox
 cd /opt/proxybox
-bash deploy/install.sh --fresh --lang en       # or --lang zh
+bash deploy/install.sh --native --fresh --lang en       # or --lang zh
 ```
 
 Fresh mode clears old ProxyBox-managed state before generating new credentials. End-to-end ~3 minutes. Prints a self-contained handoff: **login URL · username · password · 5 subscription URLs**.
@@ -191,21 +191,21 @@ ProxyBox 是跑在单台 VPS 上的 sing-box 管理后台。给**每台设备独
 
 | 方式 | 适合 | 详细 |
 | --- | --- | --- |
-| **A · Docker 安装** *(推荐)* | 已有或干净的 Debian/Ubuntu VPS | [`deploy/docker.md`](./deploy/docker.md) |
+| **A · 交互式安装** *(默认推荐 Docker)* | 已有或干净的 Debian/Ubuntu VPS | [`deploy/docker.md`](./deploy/docker.md) |
 | **B · Claude Code / Codex** | 手边有 AI 代理的用户 | [`deploy/claude-skill.md`](./deploy/claude-skill.md) |
 | **C · `install.sh`** | 需要宿主 fail2ban/Caddy 的干净 VPS | [`deploy/install-sh.md`](./deploy/install-sh.md) |
 
-#### 方式 A — Docker 安装 *(推荐)*
+#### 方式 A — 交互式安装 *(默认推荐 Docker)*
 
 ```bash
 ssh root@<你的-vps>
 apt-get update && apt-get install -y git curl ca-certificates
 git clone https://github.com/carlos0xx/proxybox /opt/proxybox
 cd /opt/proxybox
-bash deploy/docker-install.sh
+bash deploy/install.sh
 ```
 
-安装器检查 Docker/Compose 和 `ss`/`iproute2`,缺失时自动安装运行依赖并启动 Docker 服务,然后扫描宿主机端口、把新的独立 Compose project 写入 `.env`、启动 bridge 网络隔离的 Docker stack。每次运行安装器都会创建新的 ProxyBox Docker volumes 和新的凭据/订阅地址,不会删除任何旧 ProxyBox 项目。它不会在宿主机安装 Python 3.11、写 ProxyBox systemd unit、启用 fail2ban、配置 Caddy、触碰 SSH known_hosts 或修改无关宿主服务。
+安装器会用中文提示选择 Docker 或宿主机。直接回车默认 Docker:容器隔离、自动避开已占用端口、不写宿主机 systemd/fail2ban/Caddy。如果 VPS 已经跑了其他服务、网站、面板或生产系统,强烈推荐 Docker。宿主机安装会直接安装 Python、sing-box、systemd unit、fail2ban,仅建议用于干净、专用、不跑其他生产服务的 VPS。
 
 > **安装红线:** 不要删除用户 VPS 上任何文件和服务。安装器和部署代理只能碰本次安装新建的 ProxyBox 资源,绝不能碰本次安装以外任何用户数据、文件、服务、容器或 volume。
 
@@ -231,7 +231,7 @@ ssh root@<你的-vps>
 apt-get update && apt-get install -y git curl ca-certificates
 git clone https://github.com/carlos0xx/proxybox /opt/proxybox
 cd /opt/proxybox
-bash deploy/install.sh --fresh --lang zh       # 或 --lang en
+bash deploy/install.sh --native --fresh --lang zh       # 或 --lang en
 ```
 
 fresh 模式会先清掉 ProxyBox 管理的旧状态,再生成新凭据。端到端 ~3 分钟。打印自包含的凭据 + 订阅 URL:**登录地址 · 用户名 · 密码 · 5 个订阅 URL**。

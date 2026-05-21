@@ -1,8 +1,8 @@
 # `deploy/install.sh`
 
-> The one-shot Bash installer. Fresh mode wipes ProxyBox-managed state before provisioning; reuse mode stays idempotent for upgrades.
+> Native host installer. Running `deploy/install.sh` without arguments now opens the Docker/native chooser; use `--native` for this host-level path.
 
-For the high-level walkthrough, see [Getting started · Path 1](../getting-started.md#path-1--installsh-nbsprecommended-for-linux-vps).
+For the high-level walkthrough, see [Getting started · Path 1](../getting-started.md#path-1--interactive-install-docker-recommended).
 
 ---
 
@@ -13,7 +13,7 @@ ssh root@<your-vps>
 apt-get update && apt-get install -y git curl ca-certificates
 git clone https://github.com/carlos0xx/proxybox /opt/proxybox
 cd /opt/proxybox
-bash deploy/install.sh --fresh --lang en   # --lang zh for Chinese output
+bash deploy/install.sh --native --fresh --lang en   # --lang zh for Chinese output
 ```
 
 If you connect as a non-root user with passwordless `sudo`, run the same
@@ -22,6 +22,7 @@ changes.
 
 | Flag | Effect |
 | --- | --- |
+| `--native` | Use the host-level installer instead of the default Docker chooser. |
 | `--fresh` / `PROXYBOX_FRESH=1` | Stop ProxyBox services, remove ProxyBox-managed config/data/subscriptions/systemd units/managed Caddyfile, then generate a new identity. |
 | `--reuse` / `--no-fresh` | Keep existing ProxyBox state. This is the default for manual reruns and upgrades. |
 | `--lang en` / `--lang zh` | Force language. Default: auto-detect from `$LANG`. |

@@ -13,6 +13,17 @@ def test_installer_keeps_url_token_bypass_disabled_from_first_boot() -> None:
     assert "url_token_bypass: false" in INSTALL_SH
 
 
+def test_unified_installer_prompts_for_docker_or_native() -> None:
+    assert "ProxyBox 安装方式选择" in INSTALL_SH
+    assert "Docker 安装（推荐）" in INSTALL_SH
+    assert "VPS 已经跑了其他服务、网站、面板或生产系统" in INSTALL_SH
+    assert "仅建议用于干净、专用、不会跑其他生产服务的 VPS" in INSTALL_SH
+    assert "直接回车默认选择 Docker" in INSTALL_SH
+    assert "--docker" in INSTALL_SH
+    assert "--native" in INSTALL_SH
+    assert "PROXYBOX_INSTALL_MODE" in INSTALL_SH
+
+
 def test_installer_bootstraps_first_device_with_login_session() -> None:
     assert '--data-urlencode "username=$ADMIN_USER"' in INSTALL_SH
     assert '--data-urlencode "password=$ADMIN_PASSWORD"' in INSTALL_SH

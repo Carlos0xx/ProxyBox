@@ -18,17 +18,17 @@ For a higher-level walkthrough of day-to-day operations after install, see [`gui
 
 ---
 
-## Path 1 — Docker install &nbsp;<sub>(recommended)</sub>
+## Path 1 — Interactive install &nbsp;<sub>(Docker recommended)</sub>
 
 ```bash
 ssh root@<your-vps>
 apt-get update && apt-get install -y git curl ca-certificates
 git clone https://github.com/carlos0xx/proxybox /opt/proxybox
 cd /opt/proxybox
-bash deploy/docker-install.sh
+bash deploy/install.sh
 ```
 
-`deploy/docker-install.sh` checks Docker/Compose and `ss`/`iproute2`, installs missing runtime packages, starts the Docker service, scans host ports, prints/writes the selected ports to `.env`, and starts an isolated bridge-network stack. Every run creates a new Compose project and new Docker volumes, so credentials, keys, login paths, and subscription URLs are regenerated without deleting older ProxyBox projects. It does not install Python 3.11, write ProxyBox systemd units, enable fail2ban, configure Caddy, touch SSH known_hosts, or change unrelated services on the host.
+`deploy/install.sh` shows a Chinese mode picker. Press Enter for Docker, which checks Docker/Compose and `ss`/`iproute2`, installs missing runtime packages, starts Docker, scans host ports, writes `.env`, and starts an isolated bridge-network stack. Use Docker if the VPS already runs websites, panels, or production services. Native install writes Python, sing-box, systemd units, and fail2ban directly to the host; only use it on a clean dedicated VPS.
 
 > [!IMPORTANT]
 > Installation red line: never delete files or services on the user's VPS. Installers and deploy agents may only touch ProxyBox resources created for this install, and must not touch any user data, files, services, containers, or volumes outside this install. On conflicts, pick different ports, create a new isolated instance, or fail clearly.
@@ -75,7 +75,7 @@ ssh root@<your-vps>
 apt-get update && apt-get install -y git curl ca-certificates
 git clone https://github.com/carlos0xx/proxybox /opt/proxybox
 cd /opt/proxybox
-bash deploy/install.sh --fresh --lang en        # --lang zh for Chinese output
+bash deploy/install.sh --native --fresh --lang en        # --lang zh for Chinese output
 ```
 
 Fresh mode clears old ProxyBox-managed state first. It performs:

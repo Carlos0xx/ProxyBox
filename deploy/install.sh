@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# ProxyBox installer — sets up a fresh Debian/Ubuntu VPS.
+# ProxyBox installer — unified entrypoint for Docker or native install.
 #
 # Usage:
 #   git clone https://github.com/carlos0xx/proxybox /opt/proxybox
-#   cd /opt/proxybox && bash deploy/install.sh                       # auto language
-#   cd /opt/proxybox && bash deploy/install.sh --fresh               # wipe old ProxyBox state first
-#   cd /opt/proxybox && bash deploy/install.sh --lang en             # force English
-#   cd /opt/proxybox && bash deploy/install.sh --lang zh             # force Chinese
+#   cd /opt/proxybox && bash deploy/install.sh                       # choose install mode
+#   cd /opt/proxybox && bash deploy/install.sh --docker              # Docker install
+#   cd /opt/proxybox && bash deploy/install.sh --native --fresh      # native install
+#   cd /opt/proxybox && bash deploy/install.sh --fresh --lang zh     # native back-compat
 #
 # Idempotent: re-running it on an existing install does nothing destructive,
 # only fills in missing pieces. Safe to run repeatedly.
@@ -16,6 +16,77 @@
 
 set -euo pipefail
 ORIG_ARGS=("$@")
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+dispatch_install_mode() {
+    local mode="${PROXYBOX_INSTALL_MODE:-}"
+    case "$mode" in
+        docker)
+            exec bash "$ROOT_DIR/deploy/docker-install.sh" "$@"
+            ;;
+        native)
+            return
+            ;;
+        "")
+            ;;
+        *)
+            echo "错误: PROXYBOX_INSTALL_MODE 只能是 docker 或 native" >&2
+            exit 2
+            ;;
+    esac
+
+    # Back-compat: any native install option keeps the old native path.
+    if [ "$#" -gt 0 ]; then
+        export PROXYBOX_INSTALL_MODE=native
+        return
+    fi
+
+    echo
+    echo "ProxyBox 安装方式选择"
+    echo
+    echo "  1) Docker 安装（推荐）"
+    echo "     容器隔离，自动避开已占用端口，不写宿主机 systemd/fail2ban/Caddy。"
+    echo "     如果这台 VPS 已经跑了其他服务、网站、面板或生产系统，强烈推荐选这个。"
+    echo
+    echo "  2) 宿主机安装（高级）"
+    echo "     直接安装 Python、sing-box、systemd unit、fail2ban，可在面板内配置 Caddy/HTTPS。"
+    echo "     仅建议用于干净、专用、不会跑其他生产服务的 VPS。"
+    echo
+    echo "直接回车默认选择 Docker。"
+    local choice
+    if [ -t 0 ] && [ -t 1 ]; then
+        read -r -p "请选择 [1/2]: " choice
+    else
+        choice="${PROXYBOX_INSTALL_DEFAULT:-1}"
+        echo "非交互环境，默认选择 Docker。"
+    fi
+    case "${choice:-1}" in
+        1|d|D|docker|Docker|DOCKER)
+            exec bash "$ROOT_DIR/deploy/docker-install.sh"
+            ;;
+        2|n|N|native|Native|NATIVE)
+            export PROXYBOX_INSTALL_MODE=native
+            ;;
+        *)
+            echo "错误: 请输入 1(Docker) 或 2(宿主机)" >&2
+            exit 2
+            ;;
+    esac
+}
+
+case "${1:-}" in
+    --docker)
+        shift
+        exec bash "$ROOT_DIR/deploy/docker-install.sh" "$@"
+        ;;
+    --native)
+        shift
+        ORIG_ARGS=("$@")
+        export PROXYBOX_INSTALL_MODE=native
+        ;;
+esac
+
+dispatch_install_mode "$@"
 
 # ─── argv: --lang en|zh + pass-through to check-prereqs.sh ────────
 LANG_CHOICE="${PROXYBOX_LANG:-auto}"
@@ -205,6 +276,7 @@ if [ "$(id -u)" != "0" ]; then
             SINGBOX_DIR="$SINGBOX_DIR" \
             PYTHON_BIN="$PYTHON_BIN"
         )
+        [ "${PROXYBOX_INSTALL_MODE+x}" = x ] && sudo_env+=(PROXYBOX_INSTALL_MODE="$PROXYBOX_INSTALL_MODE")
         [ "${PROXYBOX_FRESH+x}" = x ] && sudo_env+=(PROXYBOX_FRESH="$PROXYBOX_FRESH")
         [ "${PROXYBOX_FIRST_DEVICE+x}" = x ] && sudo_env+=(PROXYBOX_FIRST_DEVICE="$PROXYBOX_FIRST_DEVICE")
         [ "${PROXYBOX_LOCAL_USERNAME+x}" = x ] && sudo_env+=(PROXYBOX_LOCAL_USERNAME="$PROXYBOX_LOCAL_USERNAME")
