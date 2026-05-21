@@ -78,18 +78,13 @@ Multi-arch images at `ghcr.io/carlos0xx/proxybox:latest`. No fail2ban or HTTPS U
 
 ```text
 .
-├── app/                  FastAPI admin service — routers · services · workers · db
-├── bot/                  Telegram bot (opt-in)
-├── static/               Single-file SPA (bilingual)
-├── deploy/               install.sh · check-prereqs · enable-https · claude-skill · systemd
-├── docs/                 Markdown documentation
-├── scripts/              release-audit · pii-check
-├── tests/                pytest suite
-├── docker-compose.yml
-├── Dockerfile
-├── config.example.yaml
-├── pyproject.toml
-└── CHANGELOG.md
+├── app/        FastAPI admin service
+├── bot/        Telegram bot (opt-in)
+├── static/     Single-file SPA (bilingual)
+├── deploy/     Installer, pre-flight, HTTPS provisioning, AI skill, systemd units
+├── docs/       Markdown documentation
+├── scripts/    Release audit + PII check
+└── tests/      pytest suite
 ```
 
 For service-by-service internals see [`docs/architecture.md`](./docs/architecture.md).

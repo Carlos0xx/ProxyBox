@@ -78,18 +78,13 @@ docker compose up -d
 
 ```text
 .
-├── app/                  FastAPI 管理服务 —— routers · services · workers · db
-├── bot/                  Telegram bot (可选)
-├── static/               单文件 SPA (双语)
-├── deploy/               install.sh · check-prereqs · enable-https · claude-skill · systemd
-├── docs/                 Markdown 文档
-├── scripts/              release-audit · pii-check
-├── tests/                pytest 测试
-├── docker-compose.yml
-├── Dockerfile
-├── config.example.yaml
-├── pyproject.toml
-└── CHANGELOG.md
+├── app/        FastAPI 管理服务
+├── bot/        Telegram bot (可选)
+├── static/     单文件 SPA (双语)
+├── deploy/     安装器、预检、HTTPS 配置、AI skill、systemd unit
+├── docs/       Markdown 文档
+├── scripts/    发布审计 + PII 检查
+└── tests/      pytest 测试
 ```
 
 按服务展开的详细架构见 [`docs/architecture.md`](./docs/architecture.md)。
