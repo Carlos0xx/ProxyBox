@@ -25,7 +25,7 @@ def test_admin_token_rotation_dialog_uses_returned_contract() -> None:
     assert "不带 token" not in STATIC_HTML
 
 
-def test_service_restart_button_is_text_only() -> None:
+def test_service_restart_button_uses_css_pseudo_icon() -> None:
     assert "btn-svc-restart" in STATIC_HTML
     assert "svc-restart-icon" not in STATIC_HTML
     assert '<svg class="svc-restart-icon"' not in STATIC_HTML
@@ -34,4 +34,13 @@ def test_service_restart_button_is_text_only() -> None:
     assert "<span" not in button_fragment
     assert "<svg" not in button_fragment
     assert "重启服务</button>" in STATIC_HTML
+    assert ".btn-svc-restart::before" in STATIC_HTML
+    assert 'content: ""' in STATIC_HTML
+    assert 'background-image: url("data:image/svg+xml' in STATIC_HTML
+    assert "stroke='%23ea580c'" in STATIC_HTML
+    assert "min-height: 264px" in STATIC_HTML
+    assert "background-size: 20px 20px" in STATIC_HTML
+    assert "width: 20px" in STATIC_HTML
+    assert "height: 52px" in STATIC_HTML
+    assert "color: #ea580c" in STATIC_HTML
     assert '.btn-svc-restart [class*="icon"]' in STATIC_HTML
