@@ -3372,28 +3372,28 @@ function tr(s) {
   return s;
 }
 
+function translateTextNode(node) {
+  const v = node.nodeValue;
+  const t = v.trim();
+  if (!t || !I18N_DICT[t]) return;
+  const next = v.replace(t, I18N_DICT[t]);
+  if (next !== v) node.nodeValue = next;
+}
+
 function translateNode(root) {
   if (LANG === 'zh' || !root) return;
   // Walk every text node under `root` and translate whole-string matches.
   // We also translate placeholder= / title= / data-tooltip= attributes
   // and value= on submit buttons, which can't be reached via text walker.
   if (root.nodeType === Node.TEXT_NODE) {
-    const v = root.nodeValue;
-    const t = v.trim();
-    if (t && I18N_DICT[t]) {
-      root.nodeValue = v.replace(t, I18N_DICT[t]);
-    }
+    translateTextNode(root);
     return;
   }
   if (root.nodeType !== Node.ELEMENT_NODE) return;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   let n;
   while ((n = walker.nextNode())) {
-    const v = n.nodeValue;
-    const t = v.trim();
-    if (t && I18N_DICT[t]) {
-      n.nodeValue = v.replace(t, I18N_DICT[t]);
-    }
+    translateTextNode(n);
   }
   // Attribute translation
   const ATTRS = ['placeholder', 'title', 'data-tooltip', 'value'];
@@ -3405,7 +3405,9 @@ function translateNode(root) {
       const v = el.getAttribute(a);
       if (!v) return;
       const t = v.trim();
-      if (t && I18N_DICT[t]) el.setAttribute(a, v.replace(t, I18N_DICT[t]));
+      if (!t || !I18N_DICT[t]) return;
+      const next = v.replace(t, I18N_DICT[t]);
+      if (next !== v) el.setAttribute(a, next);
     });
   });
 }
@@ -3434,10 +3436,9 @@ if (LANG === 'en') {
   const mo = new MutationObserver(records => {
     for (const r of records) {
       r.addedNodes.forEach(n => translateNode(n));
-      if (r.type === 'characterData') translateNode(r.target);
     }
   });
-  mo.observe(document.body, {childList: true, subtree: true, characterData: true});
+  mo.observe(document.body, {childList: true, subtree: true});
 }
 
 /* =================================================================
