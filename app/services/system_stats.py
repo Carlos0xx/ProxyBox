@@ -73,10 +73,39 @@ def loadavg() -> list[str]:
 
 
 def uptime_pretty() -> str:
-    return run(["uptime", "-p"]).strip()
+    out = run(["uptime", "-p"]).strip()
+    if out:
+        return out
+    try:
+        seconds = int(float(Path("/proc/uptime").read_text().split()[0]))
+    except (OSError, IndexError, ValueError):
+        return ""
+    days, rem = divmod(seconds, 86400)
+    hours, rem = divmod(rem, 3600)
+    minutes = rem // 60
+    parts: list[str] = []
+    if days:
+        parts.append(f"{days} day{'s' if days != 1 else ''}")
+    if hours:
+        parts.append(f"{hours} hour{'s' if hours != 1 else ''}")
+    if minutes or not parts:
+        parts.append(f"{minutes} minute{'s' if minutes != 1 else ''}")
+    return "up " + ", ".join(parts[:2])
 
 
 def mem_stats() -> dict[str, float | int]:
+    try:
+        meminfo: dict[str, int] = {}
+        for line in Path("/proc/meminfo").read_text().splitlines():
+            key, value = line.split(":", 1)
+            meminfo[key] = int(value.split()[0])
+        total = max(1, meminfo["MemTotal"] // 1024)
+        available = meminfo.get("MemAvailable", 0) // 1024
+        used = max(0, total - available)
+        return {"used_mb": used, "total_mb": total, "pct": round(used * 100 / total, 1)}
+    except (OSError, KeyError, IndexError, ValueError):
+        pass
+
     out = run(["free", "-m"])
     used, total = 0, 1
     for line in out.splitlines():

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import os
 from datetime import datetime
+from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import Path as ApiPath
 from fastapi.responses import PlainTextResponse
 
 from app.auth.token import admin_auth
@@ -19,8 +22,28 @@ router = APIRouter(
 )
 
 
-SvcInPath = Annotated[str, Path(pattern=r"^[a-zA-Z0-9._-]{1,64}$")]
+SvcInPath = Annotated[str, ApiPath(pattern=r"^[a-zA-Z0-9._-]{1,64}$")]
 LinesQuery = Annotated[int, Query(ge=1, le=1000)]
+
+_DOCKER_LOG_NAMES = {
+    "sing-box": "sing-box.log",
+    "proxybox-admin": "proxybox-admin.log",
+    "proxybox-traffic-worker": "proxybox-traffic-worker.log",
+}
+
+
+def _docker_log_dir() -> Path:
+    return Path(os.environ.get("PROXYBOX_DOCKER_LOG_DIR", "/var/lib/proxybox/logs"))
+
+
+def _tail_file(path: Path, n: int) -> str:
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except FileNotFoundError:
+        return "日志文件尚未生成，请稍等片刻后刷新。"
+    except OSError as exc:
+        return f"读取日志失败: {exc}"
+    return "\n".join(lines[-n:]) + ("\n" if lines else "")
 
 
 @router.get("/status")
@@ -56,8 +79,8 @@ async def logs(name: SvcInPath, n: LinesQuery = 50) -> str:
             f"config.services.monitored can be inspected",
         )
     if system_stats.runtime_is_docker():
-        return (
-            "Docker 模式不读取宿主机 journalctl。\n"
-            f"请在项目目录运行: docker compose logs --tail={n} {name}\n"
-        )
+        log_name = _DOCKER_LOG_NAMES.get(name)
+        if not log_name:
+            return "Docker 模式下该服务没有容器内日志。"
+        return _tail_file(_docker_log_dir() / log_name, n)
     return shell.run(["journalctl", "-u", name, "-n", str(n), "--no-pager"], timeout=10)

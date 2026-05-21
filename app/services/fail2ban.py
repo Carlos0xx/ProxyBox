@@ -12,9 +12,22 @@ import re
 
 from fastapi import HTTPException
 
+from app.services import system_stats
 from app.services.shell import run
 
 DEFAULT_JAIL = "manual"
+
+
+def _docker_status(jail: str) -> dict:
+    return {
+        "jail": jail,
+        "currently_banned": 0,
+        "total_banned": 0,
+        "banned": [],
+        "available": False,
+        "backend": "docker-disabled",
+        "note": "Docker 默认安装不读取或修改宿主机 fail2ban。",
+    }
 
 
 def _check_available() -> None:
@@ -25,6 +38,8 @@ def _check_available() -> None:
 
 def jail_status(jail: str = DEFAULT_JAIL) -> dict:
     """Parse `fail2ban-client status <jail>` into a JSON-friendly dict."""
+    if system_stats.runtime_is_docker():
+        return _docker_status(jail)
     _check_available()
     out = run(["fail2ban-client", "status", jail], timeout=5)
     info: dict = {
@@ -32,6 +47,8 @@ def jail_status(jail: str = DEFAULT_JAIL) -> dict:
         "currently_banned": 0,
         "total_banned": 0,
         "banned": [],
+        "available": True,
+        "backend": "fail2ban",
     }
     for line in out.splitlines():
         if "Currently banned:" in line:
@@ -49,10 +66,20 @@ def jail_status(jail: str = DEFAULT_JAIL) -> dict:
 
 
 def ban(ip: str, jail: str = DEFAULT_JAIL) -> None:
+    if system_stats.runtime_is_docker():
+        raise HTTPException(
+            501,
+            "Docker 默认安装不修改宿主机 fail2ban，请使用宿主防火墙或云防火墙封禁 IP",
+        )
     _check_available()
     run(["fail2ban-client", "set", jail, "banip", ip], timeout=5)
 
 
 def unban(ip: str, jail: str = DEFAULT_JAIL) -> None:
+    if system_stats.runtime_is_docker():
+        raise HTTPException(
+            501,
+            "Docker 默认安装不修改宿主机 fail2ban，请使用宿主防火墙或云防火墙解封 IP",
+        )
     _check_available()
     run(["fail2ban-client", "set", jail, "unbanip", ip], timeout=5)

@@ -1,12 +1,15 @@
+import asyncio
 import json
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 import yaml
+from fastapi import HTTPException
 
 from app import bootstrap
-from app.services import caddy, singbox, system_stats
+from app.routers import connections, system
+from app.services import caddy, fail2ban, singbox, system_stats
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPOSE = (ROOT / "docker-compose.yml").read_text()
@@ -22,6 +25,9 @@ def test_compose_uses_bridge_network_and_env_published_ports() -> None:
     assert "${PROXYBOX_ADMIN_BIND:-0.0.0.0}:${PROXYBOX_ADMIN_PORT:-8080}:8080/tcp" in COMPOSE
     assert "${PROXYBOX_VLESS_START:-11001}-${PROXYBOX_VLESS_END:-11050}" in COMPOSE
     assert "${PROXYBOX_HY2_START:-21001}-${PROXYBOX_HY2_END:-21050}" in COMPOSE
+    assert "proxybox-data:/var/lib/proxybox" in COMPOSE
+    assert "/opt/proxybox/deploy/docker/admin-entrypoint.sh" in COMPOSE
+    assert "PROXYBOX_DOCKER_LOG_DIR=/var/lib/proxybox/logs" in COMPOSE
     assert "/etc/proxybox/bot.env" not in COMPOSE
 
 
@@ -104,6 +110,67 @@ def test_docker_status_uses_internal_runtime_probes(monkeypatch, tmp_path: Path)
 
     assert system_stats.systemctl_is_active("proxybox-admin") == "active"
     assert system_stats.systemctl_is_active("proxybox-traffic-worker") == "active"
+
+
+def test_connections_use_configured_clash_api(monkeypatch) -> None:
+    calls: list[tuple[str, str]] = []
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def read(self) -> bytes:
+            return b'{"connections":[]}'
+
+        def readline(self) -> bytes:
+            return b'{"up":1,"down":2}\n'
+
+    def fake_urlopen(req, timeout):  # noqa: ANN001
+        calls.append((req.full_url, req.headers.get("Authorization", "")))
+        return FakeResponse()
+
+    monkeypatch.setattr(
+        connections,
+        "get_settings",
+        lambda: SimpleNamespace(
+            clash=SimpleNamespace(api_url="http://sing-box:19090", api_secret="secret")
+        ),
+    )
+    monkeypatch.setattr(connections.urllib.request, "urlopen", fake_urlopen)
+
+    assert connections._fetch_json("/connections") == {"connections": []}
+    assert calls == [("http://sing-box:19090/connections", "Bearer secret")]
+
+
+def test_fail2ban_status_degrades_in_docker(monkeypatch) -> None:
+    monkeypatch.setenv("PROXYBOX_RUNTIME", "docker")
+
+    status = fail2ban.jail_status()
+    assert status["available"] is False
+    assert status["currently_banned"] == 0
+    assert status["banned"] == []
+
+    with pytest.raises(HTTPException) as exc:
+        fail2ban.ban("203.0.113.9")
+    assert exc.value.status_code == 501
+
+
+def test_docker_logs_read_shared_log_file(monkeypatch, tmp_path: Path) -> None:
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+    (log_dir / "sing-box.log").write_text("one\ntwo\nthree\n", encoding="utf-8")
+    monkeypatch.setenv("PROXYBOX_RUNTIME", "docker")
+    monkeypatch.setenv("PROXYBOX_DOCKER_LOG_DIR", str(log_dir))
+    monkeypatch.setattr(
+        system,
+        "get_settings",
+        lambda: SimpleNamespace(services=SimpleNamespace(monitored=["sing-box"])),
+    )
+
+    assert asyncio.run(system.logs("sing-box", n=2)) == "two\nthree\n"
 
 
 def test_https_caddy_is_explicitly_disabled_in_docker(monkeypatch) -> None:
