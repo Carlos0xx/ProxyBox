@@ -30,7 +30,16 @@ def _run_scan() -> dict:
     """Invoke detect-secrets in scan mode against the tracked working tree."""
     try:
         result = subprocess.run(
-            ["detect-secrets", "scan", "--all-files"],
+            [
+                "detect-secrets",
+                "scan",
+                "--all-files",
+                # Skip git internals (.git/FETCH_HEAD etc. carry high-entropy
+                # hex strings that aren't secrets) and lockfile-like blobs
+                # that change every CI run.
+                "--exclude-files",
+                r"^(\.git/|\.ruff_cache/|\.pytest_cache/|node_modules/)",
+            ],
             capture_output=True,
             text=True,
             check=True,

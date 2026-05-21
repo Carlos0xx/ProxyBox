@@ -51,7 +51,7 @@ def _fake_sb_cfg(priv_b64: str) -> dict:
             {
                 "type": "hysteria2",
                 "tag": "hy2-template",
-                "obfs": {"password": "obfs-pw-hex"},
+                "obfs": {"password": "obfs-pw-hex"},  # pragma: allowlist secret
                 "tls": {"server_name": "www.example.com"},
             },
         ]
@@ -81,7 +81,7 @@ def test_build_hysteria2_uri_shape():
     priv_b64, _ = _gen_keypair()
     device = {
         "name": "test-phone",
-        "hy2_password": "fake-hy2-pw",
+        "hy2_password": "fake-hy2-pw",  # pragma: allowlist secret
         "hy2_port": 21001,
     }
     uri = build_hysteria2_uri(device, _fake_sb_cfg(priv_b64), "1.2.3.4")

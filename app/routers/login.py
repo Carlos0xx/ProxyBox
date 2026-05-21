@@ -138,7 +138,7 @@ _STRINGS = {
         "title_suffix": "Login",
         "tagline": "Enter your username + password to access the admin panel",
         "lbl_username": "Username",
-        "lbl_password": "Password",
+        "lbl_password": "Password",  # pragma: allowlist secret
         "btn_login": "Log in",
         "err_creds": "Wrong username or password",
         "hint": (

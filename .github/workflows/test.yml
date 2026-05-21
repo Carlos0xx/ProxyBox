@@ -34,6 +34,9 @@ jobs:
           pip install --upgrade pip pip-audit
           pip install -e .
       - name: scan installed environment
-        # --strict: any vulnerability fails CI. We ship a single binary
-        # surface (FastAPI + sing-box), so a CVE in any dep is actionable.
-        run: pip-audit --strict
+        # Default behaviour already exits non-zero on real CVE findings,
+        # which is what we actually want from CI. Skip --strict because
+        # our own package "proxybox" isn't published to PyPI and the
+        # extra strictness would fail every run on that "couldn't audit"
+        # warning, masking the actual signal we care about.
+        run: pip-audit
