@@ -2511,7 +2511,7 @@ async function loadPasskeys() {
               <td class="mono muted" style="font-size: var(--text-xs);" title="${escapeHtml(p.id_full)}">${escapeHtml(p.id_short)}</td>
               <td class="muted">${fmtTs(p.created_at)}</td>
               <td class="muted">${p.last_used_at ? fmtTs(p.last_used_at) : '—'}</td>
-              <td class="right"><button class="btn btn-sm btn-ghost" style="color: var(--danger);" onclick="revokePasskey('${encodeURIComponent(p.id_full)}', '${escapeHtml((p.label||'').replace(/'/g,'&#39;'))}')">吊销</button></td>
+              <td class="right"><button class="btn btn-sm btn-ghost btn-passkey-revoke" style="color: var(--danger);" data-cred-id="${escapeHtml(p.id_full)}" data-label="${escapeHtml(p.label || '')}">吊销</button></td>
             </tr>
           `).join('')}
         </tbody>
@@ -3550,7 +3550,7 @@ function renderConnRow(c) {
   const speedUp = c.up_speed > 0 ? fmtSpeed(c.up_speed) : '—';
   const totalBytes = fmtBytes(c.up_bytes + c.down_bytes);
   const ports = (c.ports || []).map(p => `<span class="badge">${escapeHtml(p)}</span>`).join('');
-  return `<div class="conn-row" data-ip="${escapeHtml(c.ip)}" onclick="toggleExpand(this, '${escapeHtml(c.ip)}')">
+  return `<div class="conn-row conn-row-toggle" data-ip="${escapeHtml(c.ip)}">
     <div class="conn-row-main">
       <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       <div>
@@ -3572,9 +3572,9 @@ function renderConnRow(c) {
     </div>
     <div class="conn-detail">
       <div class="conn-detail-actions">
-        <button class="btn btn-xs" onclick="event.stopPropagation(); jumpToHistory('${escapeHtml(c.device_name || '')}')">📊 查看历史</button>
-        <button class="btn btn-xs" onclick="event.stopPropagation(); openRenameDialog('${escapeHtml(c.ip)}')">✏️ 重命名</button>
-        <button class="btn btn-xs btn-danger" onclick="event.stopPropagation(); blockIPDirect('${escapeHtml(c.ip)}')">⛔ 封禁</button>
+        <button class="btn btn-xs btn-history-jump" data-stop-propagation="1" data-name="${escapeHtml(c.device_name || '')}">📊 查看历史</button>
+        <button class="btn btn-xs btn-conn-rename" data-stop-propagation="1" data-ip="${escapeHtml(c.ip)}">✏️ 重命名</button>
+        <button class="btn btn-xs btn-danger btn-conn-block" data-stop-propagation="1" data-ip="${escapeHtml(c.ip)}">⛔ 封禁</button>
       </div>
       <div class="detail-label">目的地址 · Top ${(c.dests || []).length}</div>
       ${(c.dests || []).length
@@ -3870,6 +3870,54 @@ document.addEventListener('click', async (e) => {
   await copyText(btn, text, btn.dataset.copyLabel);
 });
 
+// Delegated handler for device-row action buttons. Replaces inline
+// onclick="fn('${escapeHtml(dev.name)}', '${escapeHtml(dev.label)}')"
+// which is a stored-XSS hazard for any field that allows single-quote
+// (dev.label is free text up to 64 chars). With data-* attributes the
+// browser's HTML parser does the escaping and the JS just reads
+// element.dataset — no eval, no JS-string injection.
+const DEVICE_ACTION_HANDLERS = {
+  subs: (btn) => showDeviceSubs(btn.dataset.name),
+  rename: (btn) => renameDevicePrompt(btn.dataset.name, btn.dataset.label || ''),
+  rotate: (btn) => rotateDeviceToken(btn.dataset.name),
+  pause: (btn) => pauseDevicePrompt(btn.dataset.name, btn.dataset.label || btn.dataset.name),
+  resume: (btn) => resumeDevice(btn.dataset.name, btn.dataset.label || btn.dataset.name),
+  revoke: (btn) => revokeDevicePrompt(btn.dataset.name),
+  delete: (btn) => deleteDevicePrompt(btn.dataset.name),
+};
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.btn-device-action');
+  if (!btn) return;
+  const handler = DEVICE_ACTION_HANDLERS[btn.dataset.action];
+  if (!handler) return;
+  e.preventDefault();
+  handler(btn);
+});
+
+// Single delegated handler that covers every remaining button class
+// that used to inline-onclick a function with user-controlled data.
+// Each entry is { selector → (btn, e) => action }.
+const DELEGATED_BUTTON_HANDLERS = [
+  ['.btn-passkey-revoke', (btn) => revokePasskey(encodeURIComponent(btn.dataset.credId), btn.dataset.label || '')],
+  ['.btn-ban-unblock',    (btn) => quickUnblock(btn.dataset.ip)],
+  ['.btn-svc-restart',    (btn) => restartSvc(btn.dataset.svc)],
+  ['.btn-history-jump',   (btn) => btn.dataset.name && jumpToHistory(btn.dataset.name)],
+  ['.btn-rotate-in-dialog', (btn) => { closeDialog(); rotateDeviceToken(btn.dataset.name); }],
+  ['.btn-conn-rename',    (btn) => openRenameDialog(btn.dataset.ip)],
+  ['.btn-conn-block',     (btn) => blockIPDirect(btn.dataset.ip)],
+  ['.conn-row-toggle',    (btn) => toggleExpand(btn, btn.dataset.ip)],
+];
+document.addEventListener('click', (e) => {
+  for (const [sel, fn] of DELEGATED_BUTTON_HANDLERS) {
+    const btn = e.target.closest(sel);
+    if (!btn) continue;
+    if (btn.dataset.stopPropagation === '1') e.stopPropagation();
+    e.preventDefault();
+    fn(btn, e);
+    return;
+  }
+});
+
 async function copyText(btn, text, label) {
   const ok = await _writeClipboard(text);
   if (!ok) {
@@ -4063,7 +4111,7 @@ async function loadBans() {
         <div class="conn-meta">${escapeHtml(b.geo || '—')}</div>
       </div>
       <div><span class="badge badge-danger">已封禁</span></div>
-      <button class="btn btn-xs" onclick="quickUnblock('${escapeHtml(b.ip)}')">解封</button>
+      <button class="btn btn-xs btn-ban-unblock" data-ip="${escapeHtml(b.ip)}">解封</button>
     </div>`).join('');
 }
 
@@ -4127,7 +4175,7 @@ function renderServices() {
           ${ok ? '运行中' : escapeHtml(st)}
         </span>
       </div>
-      ${s.restart ? `<button onclick="restartSvc('${escapeHtml(s.name)}')" class="btn btn-sm btn-warn" style="width: 100%; margin-top: var(--space-2);">
+      ${s.restart ? `<button class="btn btn-sm btn-warn btn-svc-restart" data-svc="${escapeHtml(s.name)}" style="width: 100%; margin-top: var(--space-2);">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/><path d="M21 12a9 9 0 01-9 9 9.75 9.75 0 01-6.74-2.74L3 16"/><polyline points="8 16 3 16 3 21"/></svg>
         重启服务
       </button>` : ''}
@@ -4660,13 +4708,13 @@ function renderDeviceCard(dev) {
         </div>
       </div>
       <div style="display: flex; gap: var(--space-2);">
-        ${!isRevoked ? `<button class="btn btn-sm" onclick="showDeviceSubs('${escapeHtml(dev.name)}')">📋 订阅 URL</button>` : ''}
-        ${!isRevoked ? `<button class="btn btn-sm" onclick="renameDevicePrompt('${escapeHtml(dev.name)}', '${escapeHtml(dev.label || '')}')">✏️ 重命名</button>` : ''}
-        ${!isLegacy && !isRevoked && !isPaused ? `<button class="btn btn-sm" onclick="rotateDeviceToken('${escapeHtml(dev.name)}')">🔄 换 URL</button>` : ''}
-        ${!isLegacy && !isRevoked && !isPaused ? `<button class="btn btn-sm btn-warn" onclick="pauseDevicePrompt('${escapeHtml(dev.name)}', '${escapeHtml(dev.label || dev.name)}')">⏸ 暂停</button>` : ''}
-        ${isPaused ? `<button class="btn btn-sm" style="background:var(--accent); color:white;" onclick="resumeDevice('${escapeHtml(dev.name)}', '${escapeHtml(dev.label || dev.name)}')">▶ 恢复</button>` : ''}
-        ${!isLegacy && !isRevoked ? `<button class="btn btn-sm btn-danger" onclick="revokeDevicePrompt('${escapeHtml(dev.name)}')">⛔ 吊销</button>` : ''}
-        ${isRevoked ? `<button class="btn btn-sm btn-danger" onclick="deleteDevicePrompt('${escapeHtml(dev.name)}')">🗑️ 删除记录</button>` : ''}
+        ${!isRevoked ? `<button class="btn btn-sm btn-device-action" data-action="subs" data-name="${escapeHtml(dev.name)}">📋 订阅 URL</button>` : ''}
+        ${!isRevoked ? `<button class="btn btn-sm btn-device-action" data-action="rename" data-name="${escapeHtml(dev.name)}" data-label="${escapeHtml(dev.label || '')}">✏️ 重命名</button>` : ''}
+        ${!isLegacy && !isRevoked && !isPaused ? `<button class="btn btn-sm btn-device-action" data-action="rotate" data-name="${escapeHtml(dev.name)}">🔄 换 URL</button>` : ''}
+        ${!isLegacy && !isRevoked && !isPaused ? `<button class="btn btn-sm btn-warn btn-device-action" data-action="pause" data-name="${escapeHtml(dev.name)}" data-label="${escapeHtml(dev.label || dev.name)}">⏸ 暂停</button>` : ''}
+        ${isPaused ? `<button class="btn btn-sm btn-device-action" style="background:var(--accent); color:white;" data-action="resume" data-name="${escapeHtml(dev.name)}" data-label="${escapeHtml(dev.label || dev.name)}">▶ 恢复</button>` : ''}
+        ${!isLegacy && !isRevoked ? `<button class="btn btn-sm btn-danger btn-device-action" data-action="revoke" data-name="${escapeHtml(dev.name)}">⛔ 吊销</button>` : ''}
+        ${isRevoked ? `<button class="btn btn-sm btn-danger btn-device-action" data-action="delete" data-name="${escapeHtml(dev.name)}">🗑️ 删除记录</button>` : ''}
       </div>
     </div>
   </div>`;
@@ -4753,7 +4801,7 @@ async function showDeviceSubs(name) {
 
       <div style="display: flex; gap: var(--space-2); padding: var(--space-2) 0 var(--space-4); border-top: 1px solid var(--border-default); margin-top: var(--space-2);">
         <button class="btn btn-sm" onclick="copyAllSubUrls(${JSON.stringify(baseUrl)})">📋 复制全部 URL</button>
-        ${!isLegacy ? `<button class="btn btn-sm" onclick="closeDialog(); rotateDeviceToken('${escapeHtml(name)}')">🔄 换 URL</button>` : ''}
+        ${!isLegacy ? `<button class="btn btn-sm btn-rotate-in-dialog" data-name="${escapeHtml(name)}">🔄 换 URL</button>` : ''}
       </div>
     </div>
 
@@ -5168,7 +5216,7 @@ function renderTrafficOverview(d) {
         const pctTotal = total > 0 ? (dev.total / total * 100) : 0;
         const color = deviceColor(idx);
         const kindIcon = {router:'🌐', mobile:'📱', tablet:'📱', laptop:'💻', other:'📦'}[dev.kind] || '📦';
-        return `<div class="h-bar-row" onclick="jumpToHistory('${escapeHtml(dev.name)}')" style="cursor: pointer;">
+        return `<div class="h-bar-row btn-history-jump" data-name="${escapeHtml(dev.name)}" style="cursor: pointer;">
           <div class="h-bar-label">${kindIcon} ${escapeHtml(dev.label || dev.name)}</div>
           <div class="h-bar-track">
             <div class="h-bar-fill" style="width: ${Math.max(0.5, pct).toFixed(1)}%; background: linear-gradient(90deg, ${color}, ${color}cc);"></div>
@@ -5189,7 +5237,7 @@ function renderTrafficOverview(d) {
         const pct = total > 0 ? (dev.total / total * 100) : 0;
         const color = deviceColor(idx);
         const tokenShort = dev.sub_token ? `${dev.sub_token.slice(0, 8)}…` : '—';
-        return `<tr style="cursor: pointer;" onclick="jumpToHistory('${escapeHtml(dev.name)}')">
+        return `<tr class="btn-history-jump" style="cursor: pointer;" data-name="${escapeHtml(dev.name)}">
           <td>
             <div style="display: flex; align-items: center; gap: 8px;">
               <span style="width: 10px; height: 10px; border-radius: 50%; background: ${color}; flex-shrink: 0;"></span>
@@ -5249,7 +5297,7 @@ function renderDailyStack(d) {
 
   // Legend
   $('tt-stack-legend').innerHTML = devs.filter(d => d.total > 0).map((dev, idx) => `
-    <div style="display: flex; align-items: center; gap: 6px; cursor: pointer;" onclick="jumpToHistory('${escapeHtml(dev.name)}')">
+    <div class="btn-history-jump" style="display: flex; align-items: center; gap: 6px; cursor: pointer;" data-name="${escapeHtml(dev.name)}">
       <span style="width: 12px; height: 12px; border-radius: 3px; background: ${deviceColor(idx)};"></span>
       <span style="color: var(--text-2);">${escapeHtml(dev.label || dev.name)}</span>
       <span style="color: var(--text-4); font-family: var(--font-mono);">${fmtBytes(dev.total)}</span>

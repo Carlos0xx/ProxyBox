@@ -49,18 +49,17 @@ def _device_by_sub_token(sub_token: str) -> dict:
 
 @router.get("/{sub_token}", response_class=PlainTextResponse)
 async def get_subscription(sub_token: SubTokenInPath) -> str:
-    content = subscriptions.read_subscription(sub_token)
-    if content is None:
-        raise HTTPException(404, "subscription not found")
-    return content
+    # DB lookup first — same revoked / not-found behaviour as every other
+    # format. Earlier versions read the file directly, which bypassed
+    # revoked-status checks for any device whose .txt was still on disk.
+    device = _device_by_sub_token(sub_token)
+    return subscriptions.generate_subscription_text(device, singbox.read_config())
 
 
 @router.get("/{sub_token}/sub.txt", response_class=PlainTextResponse)
 async def get_subscription_txt(sub_token: SubTokenInPath) -> str:
-    content = subscriptions.read_subscription(sub_token)
-    if content is None:
-        raise HTTPException(404, "subscription not found")
-    return content
+    device = _device_by_sub_token(sub_token)
+    return subscriptions.generate_subscription_text(device, singbox.read_config())
 
 
 @router.get("/{sub_token}/clash.yaml")

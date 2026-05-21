@@ -181,7 +181,10 @@ async def create_device(body: DeviceCreate, background_tasks: BackgroundTasks) -
     vless_port, hy2_port = singbox.allocate_ports(cfg)
     vless_uuid = str(uuid.uuid4())
     hy2_password = secrets.token_urlsafe(24)
-    sub_token = secrets.token_hex(8)
+    # 192-bit URL-safe token. The previous token_hex(8) was only 64 bits
+    # which is too short for an unauthenticated public path used as the
+    # device's only credential. See subscriptions router — token IS the secret.
+    sub_token = secrets.token_urlsafe(24)
     now = int(time.time())
     label = body.label or body.name
 
@@ -239,7 +242,8 @@ async def create_device(body: DeviceCreate, background_tasks: BackgroundTasks) -
 
 @router.post("/{name}/regen-subs")
 async def regen_subs(name: NameInPath) -> dict:
-    new_sub_token = secrets.token_hex(8)
+    # 192-bit URL-safe — matches POST /devices/new. See note there.
+    new_sub_token = secrets.token_urlsafe(24)
     with connection() as conn:
         old_row = conn.execute(_GET_SQL, (name,)).fetchone()
         if old_row is None:

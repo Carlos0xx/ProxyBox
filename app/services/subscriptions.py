@@ -240,7 +240,10 @@ def write_subscription_file(device: dict[str, Any], sb_cfg: dict[str, Any] | Non
     content = generate_subscription_text(device, sb_cfg)
     path = _sub_path(device["sub_token"])
     path.write_text(content)
-    path.chmod(0o644)
+    # 0600 — the file contains VLESS UUID + Hy2 password, equivalent to
+    # raw credentials. Only proxybox-admin reads it (via FastAPI handler
+    # under its own UID); no other process needs read access.
+    path.chmod(0o600)
     return path
 
 

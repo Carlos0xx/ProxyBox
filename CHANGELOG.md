@@ -5,6 +5,51 @@ and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Security — Codex audit follow-up
+
+- **Stored XSS hardening in the SPA.** Inline `onclick="fn('${escapeHtml(...)}')"`
+  patterns let a single-quote inside an HTML-escaped value (`&#39;`) decode
+  back to `'` once the browser parses the attribute, breaking out of the
+  JS string literal. `dev.label` allowed arbitrary 64-char text, so an
+  admin entering a hostile label could execute JS on their own session.
+  Switched 13 inline-onclick template sites — device row actions
+  (subs/rename/rotate/pause/resume/revoke/delete), passkey revoke,
+  ban unblock, service restart, history jump (×3), conn-row toggle/
+  rename/block, dialog-rotate — to `data-*` attributes plus two
+  delegated event listeners.
+- **Docker bootstrap now generates full admin credentials.** `app/bootstrap.py`
+  previously only wrote `admin.token` to the freshly generated
+  `config.yaml`, so with the default `features.url_token_bypass=false`
+  the login form had no password to compare against and Docker
+  installs were effectively locked out of the panel. Now generates
+  `admin.username` / `admin.password` (16-char alnum) / `admin.login_path`
+  (12-char alnum) and prints them in a single self-contained handoff
+  block to the bootstrap container's stdout — matches `install.sh`'s
+  behaviour.
+- **`sub_token` entropy bumped 64 → 192 bits.** `secrets.token_hex(8)`
+  (16 hex chars) replaced by `secrets.token_urlsafe(24)` (32 url-safe
+  chars) in both `POST /api/devices/new` and `POST /devices/{name}/regen-subs`.
+  The path-regex `[A-Za-z0-9_-]{8,64}` already accepted both, so existing
+  shorter tokens remain valid until rotated.
+- **Subscription file permissions tightened 0644 → 0600.** Files contain
+  VLESS UUID + Hy2 password (effectively credentials); only the
+  proxybox-admin process needs read access.
+- **Default `/api/sub/{token}` + `/sub.txt` now do a DB revoke check.**
+  Previously these two endpoints just read the on-disk `.txt`; a
+  revoked device whose file lingered on disk would still serve. Both
+  now route through `_device_by_sub_token`, which raises 410 on
+  revoked devices — same behaviour the Clash/Merlin/Shadowrocket
+  format endpoints already had.
+- **Session cookie `Secure` flag now reflects request scheme.** Was
+  hardcoded `secure=False`. Now `secure=True` when the request is
+  HTTPS (direct or via `X-Forwarded-Proto: https` from Caddy) and
+  `secure=False` otherwise. Bare-HTTP installs still work; HTTPS
+  installs no longer leak the session cookie over a downgrade.
+- **`POST /api/https/enable` returns the correct login URL.** Was
+  hardcoded `https://{domain}/login`; now reads `admin.login_path` and
+  returns `https://{domain}/login/{login_path}` when set, matching the
+  rest of the post-install handoff.
+
 ## [v0.2.0] — SPA English version + bilingual login form
 
 ### Added

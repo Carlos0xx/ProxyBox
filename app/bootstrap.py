@@ -131,11 +131,33 @@ def _gen_singbox_config(sb_dir: Path) -> None:
     out.chmod(0o600)
 
 
-def _gen_proxybox_config(pb_dir: Path) -> str:
+def _gen_admin_password() -> str:
+    """16-char alphanumeric password — matches install.sh."""
+    import string
+
+    alphabet = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(16))
+
+
+def _gen_login_path() -> str:
+    """12-char alphanumeric suffix on /login — matches install.sh."""
+    import string
+
+    alphabet = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(12))
+
+
+def _gen_proxybox_config(pb_dir: Path) -> dict[str, str]:
+    """Returns the generated admin credentials so the caller can echo them."""
     admin_token = secrets.token_urlsafe(24)
+    admin_password = _gen_admin_password()
+    admin_login_path = _gen_login_path()
     public_host = _detect_public_host()
     yaml_text = f"""admin:
   token: "{admin_token}"
+  username: "admin"
+  password: "{admin_password}"
+  login_path: "{admin_login_path}"
   host: "0.0.0.0"
   port: 8080
 server:
@@ -171,7 +193,12 @@ features:
     out = pb_dir / "config.yaml"
     out.write_text(yaml_text)
     out.chmod(0o600)
-    return admin_token
+    return {
+        "token": admin_token,
+        "password": admin_password,
+        "login_path": admin_login_path,
+        "public_host": public_host,
+    }
 
 
 def main() -> int:
@@ -187,10 +214,21 @@ def main() -> int:
         print("[bootstrap] sing-box config exists, skip", flush=True)
 
     if not (pb_dir / "config.yaml").exists():
-        token = _gen_proxybox_config(pb_dir)
+        creds = _gen_proxybox_config(pb_dir)
+        host = creds["public_host"]
         print(
-            f"[bootstrap] ProxyBox config generated; admin token first 8 chars: "
-            f"{token[:8]}... (full value in /etc/proxybox/config.yaml)",
+            "\n"
+            "================================================================\n"
+            " ProxyBox · Docker bootstrap — admin credentials (saved once)\n"
+            "================================================================\n"
+            f"  Login URL    http://{host}:8080/login/{creds['login_path']}\n"
+            "  Username     admin\n"
+            f"  Password     {creds['password']}\n"
+            "----------------------------------------------------------------\n"
+            "  Copy these into a password manager BEFORE this container exits.\n"
+            "  Full values also live in /etc/proxybox/config.yaml (mode 0600)\n"
+            "  under admin.password / admin.login_path / admin.token.\n"
+            "================================================================\n",
             flush=True,
         )
     else:

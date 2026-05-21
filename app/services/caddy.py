@@ -281,11 +281,16 @@ def run(domain: str) -> dict[str, str]:
     _write_caddyfile(domain)
     _patch_config(domain)
     _reload_caddy()
+    # _patch_config rewrites public_host + reloads the settings cache, so
+    # this read sees the post-enable login_path (which is unchanged but
+    # we read it explicitly rather than assuming).
+    login_path = get_settings().admin.login_path or ""
+    login_url = f"https://{domain}/login/{login_path}" if login_path else f"https://{domain}/login"
     return {
         "domain": domain,
         "public_ip": vps_ip or "unknown",
         "caddy": install_result,
-        "login_url": f"https://{domain}/login",
+        "login_url": login_url,
     }
 
 

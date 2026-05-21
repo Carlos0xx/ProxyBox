@@ -21,7 +21,7 @@ import html
 import secrets
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, Form, HTTPException
+from fastapi import APIRouter, Cookie, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app.auth.passkey import (
@@ -254,7 +254,21 @@ async def login_page_secret(
     return _render(action=action, lang=chosen, set_cookie_lang=lang if lang else None)
 
 
+def _request_is_https(request: Request) -> bool:
+    """True if the inbound request is HTTPS — direct or behind a reverse proxy.
+
+    Trusts ``X-Forwarded-Proto`` because Caddy / nginx set it for us and we
+    only ever listen on 127.0.0.1 in front of an external TLS terminator.
+    Falls back to ``request.url.scheme`` for the bare-HTTP development case.
+    """
+    fwd = request.headers.get("x-forwarded-proto", "").lower().split(",")[0].strip()
+    if fwd:
+        return fwd == "https"
+    return request.url.scheme == "https"
+
+
 async def _do_login(
+    request: Request,
     username: str,
     password: str,
     next_path: str,
@@ -283,21 +297,27 @@ async def _do_login(
         SESSION_COOKIE_NAME,
         issue_session_cookie(),
         max_age=SESSION_MAX_AGE,
+        path="/",
         httponly=True,
         samesite="lax",
-        secure=False,
+        # Only set Secure when actually serving over HTTPS — otherwise the
+        # cookie would never be sent back over plain HTTP and the user would
+        # appear unauthenticated on bare-IP installs. See _request_is_https.
+        secure=_request_is_https(request),
     )
     return resp
 
 
 @router.post("/login", include_in_schema=False)
 async def login_submit_legacy(
+    request: Request,
     username: Annotated[str, Form()],
     password: Annotated[str, Form()],
     next: str = "",
     proxybox_lang: str | None = Cookie(default=None, alias="proxybox-lang"),
 ) -> Response:
     return await _do_login(
+        request,
         username,
         password,
         next,
@@ -308,6 +328,7 @@ async def login_submit_legacy(
 
 @router.post("/login/{secret}", include_in_schema=False)
 async def login_submit_secret(
+    request: Request,
     secret: str,
     username: Annotated[str, Form()],
     password: Annotated[str, Form()],
@@ -315,6 +336,7 @@ async def login_submit_secret(
     proxybox_lang: str | None = Cookie(default=None, alias="proxybox-lang"),
 ) -> Response:
     return await _do_login(
+        request,
         username,
         password,
         next,
