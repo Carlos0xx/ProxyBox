@@ -2,7 +2,7 @@
 # ecosystem watches this line and opens a PR when 3.13.x bumps. Floating
 # `:3.13-slim-bookworm` would pull a fresh image silently on every build,
 # which is the supply-chain hazard we want to avoid.
-FROM python:3.13.13-slim-bookworm
+FROM python:3.14.5-slim-bookworm
 
 # Runtime essentials:
 # - openssl: bootstrap generates the Hy2 self-signed cert
