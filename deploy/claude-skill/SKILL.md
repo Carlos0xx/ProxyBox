@@ -350,17 +350,13 @@ are generated on-the-fly from the same per-device row:
 
 | URL suffix                | Format          | Tested clients                                    |
 | ------------------------- | --------------- | ------------------------------------------------- |
-| *(none, default)*         | URI list        | sing-box-iOS, Shadowrocket (Type: Subscribe), Hiddify |
-| `/sub.txt`                | URI list        | Same as default — `.txt` alias for clients that key on extension |
 | `/shadowrocket.yaml`      | Clash YAML      | Recommended Shadowrocket subscription with nodes + rules |
-| `/shadowrocket.txt`       | URI list        | Explicit Shadowrocket node-subscription alias |
 | `/clash.yaml`             | Mihomo / Clash  | Stash, Clash for iOS, Clash Verge (macOS/Win), Clash for Android |
 | `/merlin.yaml`            | Clash + `tun:`  | AsusWRT-Merlin with Clash on the router (transparent proxy) |
-| `/shadowrocket.conf`      | Rules `.conf`   | Shadowrocket rules only; add node subscription first |
+| *(none, default)*         | URI list        | sing-box-iOS, Hiddify, generic URI-list clients |
 
 If the user is in doubt on Shadowrocket, use `/shadowrocket.yaml` first. For
-ordinary URI-list clients, the default URL and `/sub.txt` alias remain the
-generic node subscription formats.
+ordinary URI-list clients, use the default URL without a suffix.
 
 ## Anti-patterns (do NOT do these)
 

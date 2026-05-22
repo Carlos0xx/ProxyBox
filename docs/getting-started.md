@@ -81,9 +81,9 @@ Fresh mode clears old ProxyBox-managed state first. It performs:
 3. **sing-box** — pulls the latest stable binary from GitHub releases (auto-detects amd64 / arm64).
 4. **Crypto generation** — Reality keypair, Hy2 self-signed cert, random SNI picked per install.
 5. **Config writes** — `/etc/sing-box/config.json` and `/etc/proxybox/config.yaml` (mode 0600, root-owned).
-6. **systemd units** — `sing-box`, `proxybox-admin`, `proxybox-traffic-worker`, `proxybox-bot` (bot stays disabled until configured).
+6. **systemd units** — `sing-box`, `proxybox-admin`, `proxybox-traffic-worker`, `proxybox-watchdog`, `proxybox-bot` (bot stays disabled until configured).
 7. **Auto-create the first device** — default name is 5 random lowercase letters (override with env var `PROXYBOX_FIRST_DEVICE=<name>`, or set it empty to skip).
-8. **Print the handoff** — the login URL, username, password, and 5 subscription URLs in a single self-contained block.
+8. **Print the handoff** — the login URL, username, password, and 4 subscription URLs in a single self-contained block.
 
 > [!IMPORTANT]
 > Copy the credentials into a password manager **before closing the terminal**. Recovery via SSH:
@@ -105,15 +105,14 @@ Full reference: [`deploy/install-sh.md`](./deploy/install-sh.md).
 
 2. **Enter `admin` + the printed password.** A session cookie is set for 30 days; you land in the SPA.
 
-3. **The first device is already created** (5 random lowercase letters by default). Open the **Endpoints** page from the side nav. Five URLs are listed:
+3. **The first device is already created** (5 random lowercase letters by default). Open the **Endpoints** page from the side nav. Four URLs are listed:
 
    | Format | Best for |
    | --- | --- |
-   | `[pick this]` (default URI list) | sing-box · Shadowrocket "Type: Subscribe" · Hiddify |
+   | `shadowrocket.yaml` | Shadowrocket subscription with nodes + rules |
    | `clash.yaml` | Stash · Clash for iOS · Clash Verge |
    | `merlin.yaml` | AsusWRT-Merlin routers with Clash |
-   | `shadowrocket.conf` | Shadowrocket native parser (fallback) |
-   | `sub.txt` | Clients that key on file extension |
+   | `[generic]` (default URI list) | sing-box · Hiddify · basic node clients |
 
 4. **Paste the matching URL** into the client's "Add subscription" dialog. The client downloads the URI list; the proxy is active.
 

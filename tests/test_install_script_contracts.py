@@ -57,17 +57,18 @@ def test_installer_bootstraps_first_device_with_login_session() -> None:
     assert "local-user|@local-user|auto-user" in INSTALL_SH
 
 
-def test_installer_distinguishes_shadowrocket_nodes_from_config() -> None:
-    assert "/shadowrocket.txt" in INSTALL_SH
+def test_installer_handoff_only_prints_current_recommended_subscriptions() -> None:
+    assert "/shadowrocket.txt" not in INSTALL_SH
     assert "/shadowrocket.yaml" in INSTALL_SH
-    assert "/shadowrocket.conf" in INSTALL_SH
-    assert "Shadowrocket 双协议节点订阅" in INSTALL_SH
+    assert "/shadowrocket.conf" not in INSTALL_SH
+    assert "/sub.txt" not in INSTALL_SH
+    assert "Shadowrocket 双协议节点订阅" not in INSTALL_SH
     assert "Shadowrocket 订阅链接 · 节点+规则" in INSTALL_SH
     assert "Shadowrocket 节点订阅 · sing-box · Hiddify" not in INSTALL_SH
     recommended_block = INSTALL_SH.split("# Recommended", 1)[1].split("# Other formats", 1)[0]
     assert "M_SUB_SR_YAML_TAG" in recommended_block
     assert "M_SUB_CLASH_TAG" not in recommended_block
-    assert "规则文件, 需先添加节点订阅" in INSTALL_SH
+    assert "规则文件, 需先添加节点订阅" not in INSTALL_SH
 
 
 def test_installer_auto_escalates_when_passwordless_sudo_is_available() -> None:
@@ -121,6 +122,15 @@ def test_installer_rewrites_managed_systemd_units() -> None:
     assert "[ ! -f /etc/systemd/system/proxybox-admin.service ]" not in INSTALL_SH
     assert 'install -m 644 "$src" "$dst"' in INSTALL_SH
     assert 'systemctl restart "$svc"' in INSTALL_SH
+
+
+def test_native_installer_adds_watchdog_for_service_and_port_recovery() -> None:
+    assert "/etc/systemd/system/proxybox-watchdog.service" in INSTALL_SH
+    assert "python -m app.services.watchdog" in INSTALL_SH
+    assert "proxybox-watchdog" in INSTALL_SH
+    assert (
+        "for svc in fail2ban sing-box proxybox-admin proxybox-traffic-worker proxybox-watchdog"
+    ) in INSTALL_SH
 
 
 def test_docker_bootstrap_supports_fresh_mode_for_named_volumes() -> None:

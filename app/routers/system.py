@@ -29,6 +29,7 @@ _DOCKER_LOG_NAMES = {
     "sing-box": "sing-box.log",
     "proxybox-admin": "proxybox-admin.log",
     "proxybox-traffic-worker": "proxybox-traffic-worker.log",
+    "proxybox-watchdog": "proxybox-admin.log",
 }
 
 

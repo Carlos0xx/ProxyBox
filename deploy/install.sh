@@ -159,7 +159,7 @@ if [ "$LANG_CHOICE" = "zh" ]; then
     M_LOGIN_USER_LABEL="用户名"
     M_LOGIN_PASS_LABEL="密  码"
     M_SECTION_SUBS_TITLE="📲 订阅 URL"
-    M_SECTION_SUBS_HINT="Shadowrocket 分流优先用 [SR 分流]; 普通节点用 [SR 节点]"
+    M_SECTION_SUBS_HINT="Shadowrocket 优先用 [SR 分流]; Stash/Clash 用 [Clash 系]"
     M_SUB_DEFAULT_TAG="[通用]"
     M_SUB_DEFAULT_DESC="sing-box · Hiddify · 双协议节点"
     M_SUB_CLASH_TAG="[Clash 系]"
@@ -168,12 +168,6 @@ if [ "$LANG_CHOICE" = "zh" ]; then
     M_SUB_SR_YAML_DESC="Shadowrocket 订阅链接 · 节点+规则"
     M_SUB_MERLIN_TAG="[路由器]"
     M_SUB_MERLIN_DESC="AsusWRT-Merlin · Clash 透明代理"
-    M_SUB_SR_NODE_TAG="[SR 节点]"
-    M_SUB_SR_NODE_DESC="Shadowrocket 双协议节点订阅"
-    M_SUB_SR_TAG="[SR 规则]"
-    M_SUB_SR_DESC="Shadowrocket .conf · 规则文件, 需先添加节点订阅"
-    M_SUB_TXT_TAG="[别名]"
-    M_SUB_TXT_DESC="URI 列表 · .txt 扩展名"
     M_SECTION_SERVICES_TITLE="服务状态"
     M_SECTION_ADVANCED_TITLE="进阶 — 按需开启"
     M_ADV_PASSKEY="passkey   config.yaml 里 features.passkey=true + 套 HTTPS"
@@ -218,7 +212,7 @@ else
     M_LOGIN_USER_LABEL="username"
     M_LOGIN_PASS_LABEL="password"
     M_SECTION_SUBS_TITLE="📲 subscription URLs"
-    M_SECTION_SUBS_HINT="use [SR rules] first for Shadowrocket split config; [SR nodes] for nodes"
+    M_SECTION_SUBS_HINT="use [SR rules] for Shadowrocket; [Clash] for Stash/Clash clients"
     M_SUB_DEFAULT_TAG="[generic]"
     M_SUB_DEFAULT_DESC="sing-box · Hiddify · dual-protocol nodes"
     M_SUB_CLASH_TAG="[Clash]"
@@ -227,12 +221,6 @@ else
     M_SUB_SR_YAML_DESC="Shadowrocket subscription · nodes + rules"
     M_SUB_MERLIN_TAG="[router]"
     M_SUB_MERLIN_DESC="AsusWRT-Merlin · Clash transparent proxy"
-    M_SUB_SR_NODE_TAG="[SR nodes]"
-    M_SUB_SR_NODE_DESC="Shadowrocket dual-protocol node subscription"
-    M_SUB_SR_TAG="[SR conf]"
-    M_SUB_SR_DESC="Shadowrocket .conf rules only · add node subscription first"
-    M_SUB_TXT_TAG="[alias]"
-    M_SUB_TXT_DESC="URI list · .txt extension"
     M_SECTION_SERVICES_TITLE="services"
     M_SECTION_ADVANCED_TITLE="advanced — enable later if needed"
     M_ADV_PASSKEY="passkey   set features.passkey=true + passkey.rp_id/origin in config.yaml + Caddy/TLS"
@@ -330,7 +318,7 @@ fresh_cleanup() {
     echo "$M_FRESH_CLEAN"
 
     if command -v systemctl >/dev/null 2>&1; then
-        systemctl stop proxybox-bot proxybox-traffic-worker proxybox-admin sing-box >/dev/null 2>&1 || true
+        systemctl stop proxybox-watchdog proxybox-bot proxybox-traffic-worker proxybox-admin sing-box >/dev/null 2>&1 || true
         if [ -f /etc/caddy/Caddyfile ] && grep -q '^# ProxyBox HTTPS' /etc/caddy/Caddyfile 2>/dev/null; then
             systemctl stop caddy >/dev/null 2>&1 || true
             systemctl disable caddy >/dev/null 2>&1 || true
@@ -340,6 +328,7 @@ fresh_cleanup() {
 
     rm -f \
         /etc/systemd/system/proxybox-admin.service \
+        /etc/systemd/system/proxybox-watchdog.service \
         /etc/systemd/system/proxybox-traffic-worker.service \
         /etc/systemd/system/proxybox-bot.service \
         /etc/systemd/system/sing-box.service
@@ -567,6 +556,7 @@ services:
     - sing-box
     - proxybox-admin
     - proxybox-traffic-worker
+    - proxybox-watchdog
     - fail2ban
 ports:
   vless_range: [11001, 11050]
@@ -637,7 +627,27 @@ NoNewPrivileges=yes
 WantedBy=multi-user.target
 UNIT
 
-# ─── 10. other systemd units (worker + bot) ────────────────────────
+# ─── 10. ProxyBox watchdog systemd unit ────────────────────────────
+install -m 644 /dev/stdin /etc/systemd/system/proxybox-watchdog.service <<UNIT
+[Unit]
+Description=ProxyBox service and port watchdog
+After=network.target sing-box.service proxybox-admin.service proxybox-traffic-worker.service
+Wants=sing-box.service proxybox-admin.service proxybox-traffic-worker.service
+
+[Service]
+Type=simple
+WorkingDirectory=$PROXYBOX_DIR
+Environment=PROXYBOX_CONFIG=$CONFIG_DIR/config.yaml
+ExecStart=$PROXYBOX_DIR/.venv/bin/python -m app.services.watchdog
+Restart=always
+RestartSec=5s
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+# ─── 11. other systemd units (worker + bot) ────────────────────────
 for unit in proxybox-traffic-worker.service proxybox-bot.service; do
     src="$PROXYBOX_DIR/deploy/systemd/$unit"
     dst="/etc/systemd/system/$unit"
@@ -647,15 +657,15 @@ for unit in proxybox-traffic-worker.service proxybox-bot.service; do
 done
 systemctl daemon-reload
 
-# ─── 11. enable + start core services ──────────────────────────────
+# ─── 12. enable + start core services ──────────────────────────────
 echo "$M_START_SERVICES"
-for svc in fail2ban sing-box proxybox-admin proxybox-traffic-worker; do
+for svc in fail2ban sing-box proxybox-admin proxybox-traffic-worker proxybox-watchdog; do
     systemctl enable "$svc" >/dev/null 2>&1 || true
     systemctl restart "$svc" >/dev/null 2>&1 || true
 done
 sleep 3
 
-# ─── 12. read token + host ─────────────────────────────────────────
+# ─── 13. read token + host ─────────────────────────────────────────
 ADMIN_TOKEN=$(.venv/bin/python -c "import yaml; print(yaml.safe_load(open('$CONFIG_DIR/config.yaml'))['admin']['token'])")
 PUBLIC_HOST=$(.venv/bin/python -c "import yaml; print(yaml.safe_load(open('$CONFIG_DIR/config.yaml'))['server']['public_host'])")
 ADMIN_BASE="http://${PUBLIC_HOST:-<your-vps-ip>}:8080"
@@ -670,7 +680,7 @@ else
     LOGIN_PATH="/login"
 fi
 
-# ─── 13. auto-create first device (one-shot UX) ────────────────────
+# ─── 14. auto-create first device (one-shot UX) ────────────────────
 # Wait for proxybox-admin to be reachable on localhost (sleep 3 above
 # is usually enough on a real VPS, but be defensive on slow hosts).
 resolve_first_device_name() {
@@ -796,7 +806,7 @@ except Exception:
     fi
 fi
 
-# ─── 14. lock down: disable URL-token bypass + restart admin ───────
+# ─── 15. lock down: disable URL-token bypass + restart admin ───────
 # Enforce the documented default after bootstrap and after any re-run from an
 # older install: /admin/{token}/ requires a /login session cookie. Restart so
 # the @lru_cache'd settings reload. ~3s, harmless.
@@ -822,7 +832,7 @@ else
     LOGIN_URL="$ADMIN_BASE/login"
 fi
 
-# ─── 15. summary ───────────────────────────────────────────────────
+# ─── 16. summary ───────────────────────────────────────────────────
 echo ""
 echo ""
 printf "%s  %s%s\n" "$C_GREEN_B" "$HR" "$C_RESET"
@@ -855,10 +865,7 @@ if [ -n "$SUB_TOKEN" ]; then
     for entry in \
         "$M_SUB_CLASH_TAG|$M_SUB_CLASH_DESC|/clash.yaml" \
         "$M_SUB_MERLIN_TAG|$M_SUB_MERLIN_DESC|/merlin.yaml" \
-        "$M_SUB_SR_NODE_TAG|$M_SUB_SR_NODE_DESC|/shadowrocket.txt" \
-        "$M_SUB_SR_TAG|$M_SUB_SR_DESC|/shadowrocket.conf" \
-        "$M_SUB_DEFAULT_TAG|$M_SUB_DEFAULT_DESC|" \
-        "$M_SUB_TXT_TAG|$M_SUB_TXT_DESC|/sub.txt"; do
+        "$M_SUB_DEFAULT_TAG|$M_SUB_DEFAULT_DESC|"; do
         IFS='|' read -r tag desc suffix <<< "$entry"
         printf "      %s%s%s  %s\n" "$C_BOLD" "$tag" "$C_RESET" "$desc"
         printf "      %s%s%s%s\n" "$C_GREEN" "$SUB_BASE" "$suffix" "$C_RESET"
@@ -869,7 +876,7 @@ fi
 # ── Services block — green ✓ for active, red ✗ for inactive ─────────
 printf "  %s%s%s\n" "$C_CYAN_B" "$M_SECTION_SERVICES_TITLE" "$C_RESET"
 echo ""
-for svc in sing-box proxybox-admin proxybox-traffic-worker fail2ban; do
+for svc in sing-box proxybox-admin proxybox-traffic-worker proxybox-watchdog fail2ban; do
     state=$(systemctl is-active "$svc" 2>/dev/null || echo unknown)
     case "$state" in
         active)

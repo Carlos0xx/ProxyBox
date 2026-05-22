@@ -2424,11 +2424,8 @@ const CLIENT_NAMES = {
   'clash.yaml':              ['Stash / Clash',  '推荐 · 分流规则'],
   'shadowrocket.yaml':       ['Shadowrocket 分流', '节点+规则'],
   'merlin.yaml':             ['Merlin 路由器',  '分流规则'],
-  'shadowrocket.conf':       ['Shadowrocket 规则', '需先加节点'],
-  'shadowrocket.txt':        ['Shadowrocket 节点', '节点订阅'],
   'shadowrocket-full.conf':  ['Shadowrocket 完整版', '备份'],
   'sub':                     ['SR URI 订阅',    'base64'],
-  'sub.txt':                 ['SR URI 明文',    'plain'],
   'sub.json':                ['sing-box / Karing', '原生'],
 };
 
@@ -3299,9 +3296,6 @@ async function loadSubs() {
     {file: '/shadowrocket.yaml', tag: '[SR 分流]', desc: 'Shadowrocket 订阅链接 · 节点+规则', prefer: true},
     {file: '/clash.yaml',        tag: '[Clash 系]', desc: 'Stash · Clash for iOS · AI/流媒体/CN 分流'},
     {file: '/merlin.yaml',       tag: '[路由器]', desc: 'AsusWRT-Merlin · 透明代理分流'},
-    {file: '/shadowrocket.txt',  tag: '[SR 节点]', desc: 'Shadowrocket 双协议节点订阅'},
-    {file: '/shadowrocket.conf', tag: '[SR 规则]', desc: '规则文件 · 需先添加节点订阅'},
-    {file: '/sub.txt',           tag: '[别名]',   desc: 'URI 列表 · .txt 扩展名'},
   ];
   list.innerHTML = devices.map(dev => {
     const baseUrl = `${origin}/api/sub/${dev.sub_token}`;
@@ -3686,6 +3680,7 @@ function renderServices() {
     'sing-box':                 { label: 'sing-box',       desc: '代理核心服务',         restart: true  },
     'proxybox-admin':           { label: 'Admin',          desc: 'Web 后台 (本进程)',    restart: false }, // restarting self = bad UX
     'proxybox-traffic-worker':  { label: 'Traffic Worker', desc: '流量采集 (Clash API)',  restart: true  },
+    'proxybox-watchdog':        { label: '看门狗',          desc: '服务与端口自恢复',       restart: false },
     'fail2ban':                 { label: 'fail2ban',       desc: '入侵检测 / IP 封禁',    restart: false },
     'caddy':                    { label: 'caddy',          desc: 'HTTPS 反向代理 (可选)', restart: true  },
     'proxybox-bot':             { label: 'TG bot',         desc: 'Telegram 管理 bot (可选)', restart: true },
@@ -3886,6 +3881,7 @@ const LOG_LABELS = {
   'sing-box':                'sing-box',
   'proxybox-admin':          'admin',
   'proxybox-traffic-worker': 'traffic',
+  'proxybox-watchdog':       'watchdog',
   'fail2ban':                'fail2ban',
   'caddy':                   'caddy',
   'proxybox-bot':            'TG bot',
@@ -4300,17 +4296,14 @@ async function showDeviceSubs(name) {
     ? 'vless (legacy share)'
     : `vless :${dev.vless_port} · hy2 :${dev.hy2_port}`;
 
-  // v0.1.x serves the URI list at the base path and extension-suffixed
-  // alternates (sub.txt / shadowrocket.txt / shadowrocket.yaml / clash.yaml /
-  // merlin.yaml / shadowrocket.conf).
+  // v0.1.x serves the URI list at the base path and selected
+  // extension-suffixed alternates (shadowrocket.yaml / clash.yaml /
+  // merlin.yaml). Hidden legacy aliases are intentionally not advertised.
   // Built on-the-fly by the subscription router, no extra files on disk.
   const urls = [
     { file: '/shadowrocket.yaml', label: 'Shadowrocket 分流订阅 (推荐)',            hint: '📱 节点+规则 · 配置页导入',          prefer: true },
     { file: '/clash.yaml',        label: 'Stash / Clash for iOS',          hint: '📱 内置 AI/流媒体/CN 分流规则',              prefer: false },
     { file: '/merlin.yaml',       label: 'Merlin Clash 路由器',             hint: '🌐 内置 tun + 分流规则',                    prefer: false },
-    { file: '/shadowrocket.txt',  label: 'Shadowrocket 双协议节点订阅',     hint: '📱 填到 Add Subscribe / 节点订阅',         prefer: false },
-    { file: '/shadowrocket.conf', label: 'Shadowrocket 规则文件',            hint: '⚠️ 先加节点订阅, 再导入这个规则文件',     prefer: false },
-    { file: '/sub.txt',           label: 'URI 列表 (.txt 别名)',           hint: '👀 与默认链接同内容, 部分客户端按扩展名识别',   prefer: false },
   ];
 
   // Build inline dialog (using our existing dialog backdrop but with custom content)
@@ -4451,12 +4444,9 @@ async function copyAllSubUrls(baseUrl) {
     `clash.yaml:        ${baseUrl}/clash.yaml`,
     `shadowrocket.yaml: ${baseUrl}/shadowrocket.yaml`,
     `merlin.yaml:       ${baseUrl}/merlin.yaml`,
-    `shadowrocket nodes: ${baseUrl}/shadowrocket.txt`,
-    `shadowrocket rules: ${baseUrl}/shadowrocket.conf`,
-    `sub.txt:           ${baseUrl}/sub.txt`,
   ];
   const ok = await _writeClipboard(lines.join('\n'));
-  if (ok) toast.success('全部已复制', '5 个 URL');
+  if (ok) toast.success('全部已复制', '4 个 URL');
   else toast.error('复制失败', '请手动选中后 Cmd+C / Ctrl+C');
 }
 

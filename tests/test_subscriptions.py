@@ -189,17 +189,17 @@ def test_shadowrocket_conf_is_rules_only_without_binance(monkeypatch):
 def test_subscription_routes_support_head_requests() -> None:
     expected = {
         "/api/sub/{sub_token}",
-        "/api/sub/{sub_token}/sub.txt",
-        "/api/sub/{sub_token}/shadowrocket.txt",
         "/api/sub/{sub_token}/clash.yaml",
         "/api/sub/{sub_token}/shadowrocket.yaml",
         "/api/sub/{sub_token}/merlin.yaml",
-        "/api/sub/{sub_token}/shadowrocket.conf",
     }
     route_methods = {route.path: route.methods for route in subscription_router.routes}
 
     for path in expected:
         assert {"GET", "HEAD"} <= route_methods[path]
+    assert "/api/sub/{sub_token}/sub.txt" not in route_methods
+    assert "/api/sub/{sub_token}/shadowrocket.txt" not in route_methods
+    assert "/api/sub/{sub_token}/shadowrocket.conf" not in route_methods
 
 
 def test_subscription_head_probe_returns_success_without_body(monkeypatch) -> None:

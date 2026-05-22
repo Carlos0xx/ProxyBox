@@ -25,7 +25,7 @@
 | :--- | :--- |
 | 🔐 &nbsp; **按设备独立入站** | 每台设备一对独立 UUID + TCP/UDP 端口。某台凭证泄漏只 revoke 那一台,不影响其他。 |
 | 🌐 &nbsp; **VLESS Reality + Hysteria2** | TCP 路伪装在真实域名 TLS 指纹后面;TCP 被限速时 UDP 路顶上。 |
-| 📲 &nbsp; **5 种订阅格式** | URI list · `clash.yaml` · `merlin.yaml` · `shadowrocket.conf` · `sub.txt`,按设备服务端即时生成。 |
+| 📲 &nbsp; **订阅格式** | Shadowrocket 分流 · `clash.yaml` · `merlin.yaml` · 默认 URI list,按设备服务端即时生成。 |
 | 📊 &nbsp; **真实流量记账** | worker 每 10 秒拉一次 sing-box Clash API。SQLite 按设备×小时桶 bytes,按域名分类 (Video / Social / AI / CDN …)。 |
 | 🔑 &nbsp; **用户名密码登录** | 表单在 `/login/{12 位随机后缀}`,`/login` 单独返 404。改密码 + 轮换登录路径都在面板里 —— 不用 SSH。 |
 | 🔒 &nbsp; **HTTPS 方案** | Docker 路径建议接宿主反代 / Tunnel;裸机模式仍可在面板里启用 Caddy + Let's Encrypt。 |

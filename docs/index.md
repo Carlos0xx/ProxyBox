@@ -34,8 +34,8 @@ features:
     details: Docker installs stay isolated and expect an external reverse proxy or tunnel. Native installs can still enable Caddy + Let's Encrypt from the panel.
 
   - icon: 📲
-    title: 5 subscription formats
-    details: URI list (default) · clash.yaml · merlin.yaml · shadowrocket.conf · sub.txt. All generated on the fly per device — sing-box · Shadowrocket · Stash · Clash · Hiddify all work.
+    title: Subscription formats
+    details: Shadowrocket split config · clash.yaml · merlin.yaml · default URI list. All generated on the fly per device — sing-box · Shadowrocket · Stash · Clash · Hiddify all work.
 
   - icon: 🐳
     title: Docker-first install

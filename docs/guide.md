@@ -86,7 +86,7 @@ cd "$INSTALL_DIR"
 bash deploy/install.sh --native --fresh --lang en       # or --lang zh
 ```
 
-Fresh mode clears old ProxyBox-managed state before generating new credentials. End-to-end ~3 minutes. Prints a self-contained handoff: **login URL · username · password · 5 subscription URLs**.
+Fresh mode clears old ProxyBox-managed state before generating new credentials. End-to-end ~3 minutes. Prints a self-contained handoff: **login URL · username · password · 4 subscription URLs**.
 
 > [!IMPORTANT]
 > Copy the credentials into a password manager **before closing the terminal**. Recovery via SSH: `cat /etc/proxybox/admin.password` (mode 0400) for the password; the rest is in `/etc/proxybox/config.yaml`.
@@ -104,15 +104,14 @@ http://<your-vps>:<admin-port>/login/<random-12-char-suffix>
 
 Enter `admin` + the printed password. A 30-day session cookie is set; you land in the SPA.
 
-The auto-created first device uses a **5-letter random lowercase name** and is already in the **Devices** page. The five subscription URLs are in **Endpoints**:
+The auto-created first device uses a **5-letter random lowercase name** and is already in the **Devices** page. The subscription URLs are in **Endpoints**:
 
 | Format | Best for |
 | --- | --- |
-| `[pick this]` *(default URI list)* | sing-box · Shadowrocket "Type: Subscribe" · Hiddify |
+| `shadowrocket.yaml` | Shadowrocket 订阅链接 · 节点+规则 |
 | `clash.yaml` | Stash · Clash for iOS · Clash Verge |
 | `merlin.yaml` | AsusWRT-Merlin routers with Clash |
-| `shadowrocket.conf` | Shadowrocket native parser (fallback) |
-| `sub.txt` | Clients that key on the `.txt` extension |
+| `[generic]` *(default URI list)* | sing-box · Hiddify · basic node clients |
 
 Paste the matching URL into your client's "Add subscription" dialog. Then verify on the client device: `https://ifconfig.me` should now report your VPS's IP.
 
@@ -256,15 +255,14 @@ http://<你的-VPS>:<admin-port>/login/<12 位随机串>
 
 输 `admin` + 打印的密码。30 天 session cookie 设上,进 SPA。
 
-自动建好的第一台设备会使用 **5 位小写随机名**,已经在 **设备管理** 里。**订阅链接** 页有 5 种格式:
+自动建好的第一台设备会使用 **5 位小写随机名**,已经在 **设备管理** 里。**订阅链接** 页显示 4 种格式:
 
 | 格式 | 适合 |
 | --- | --- |
-| `[推荐]` *(默认 URI 列表)* | sing-box · Shadowrocket "Type: Subscribe" · Hiddify |
+| `shadowrocket.yaml` | Shadowrocket 订阅链接 · 节点+规则 |
 | `clash.yaml` | Stash · Clash for iOS · Clash Verge |
 | `merlin.yaml` | AsusWRT-Merlin 路由器跑 Clash |
-| `shadowrocket.conf` | Shadowrocket 原生解析器 (备用) |
-| `sub.txt` | 按 `.txt` 扩展名识别的客户端 |
+| `[通用]` *(默认 URI 列表)* | sing-box · Hiddify · 普通节点客户端 |
 
 把对应 URL 粘进客户端的 "添加订阅" 对话框。客户端访问 `https://ifconfig.me` 应该已经显示你 VPS 的 IP。
 

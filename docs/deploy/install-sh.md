@@ -71,10 +71,10 @@ sudo bash deploy/check-prereqs.sh --install  # also apt-install missing apt deps
 | 6 | **Python 3.11 venv** at `<proxybox-install-dir>/.venv` + `pip install -e .`; an existing non-3.11 venv in that install dir is recreated. |
 | 7 | **`/etc/proxybox/config.yaml`** — random `admin.token` (24 bytes), random `admin.login_path` (12 alnum), `features.url_token_bypass: false`, and `server.public_host` auto-detected via `ifconfig.me` / `ipify.org`. Mode 0600, root-owned. **The password lives separately** at `/etc/proxybox/admin.password` (mode 0400, root-owned) so a casual `cat config.yaml` cannot leak it. |
 | 8 | **fail2ban `[manual]` jail** in `/etc/fail2ban/jail.d/proxybox.local` with `backend=systemd`, plus an `sshd` backend override so minimal images without `/var/log/auth.log` do not fail. |
-| 9 | **Four systemd units** — `proxybox-admin`, `proxybox-traffic-worker`, `proxybox-bot` (disabled by default). |
+| 9 | **Systemd units** — `proxybox-admin`, `proxybox-traffic-worker`, `proxybox-watchdog`, `proxybox-bot` (bot disabled by default). |
 | 10 | `systemctl enable --now` for core services. |
 | 11 | **Auto-creates the first device** (5 random lowercase letters by default; override with `PROXYBOX_FIRST_DEVICE`; set it empty to skip) by logging in with the generated username/password and using that session cookie. |
-| 12 | **Self-contained handoff** — login URL, username, password, 5 subscription URLs in a single coloured block. |
+| 12 | **Self-contained handoff** — login URL, username, password, 4 subscription URLs in a single coloured block. |
 
 > [!IMPORTANT]
 > The handoff prints the **full** password and **full** login URL — copy them into a password manager before closing the terminal. The token in the URL and the password in plain text are both required to log in; either alone is useless.

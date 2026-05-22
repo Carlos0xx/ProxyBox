@@ -242,6 +242,7 @@ services:
     - sing-box
     - proxybox-admin
     - proxybox-traffic-worker
+    - proxybox-watchdog
 ports:
   vless_range: [{vless_range[0]}, {vless_range[1]}]
   hy2_range: [{hy2_range[0]}, {hy2_range[1]}]

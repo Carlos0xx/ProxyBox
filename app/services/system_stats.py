@@ -103,7 +103,9 @@ def _docker_service_state(unit: str) -> str:
     if unit == "proxybox-admin":
         return "active"
     if unit == "proxybox-traffic-worker":
-        return _heartbeat_state()
+        return _heartbeat_state("PROXYBOX_TRAFFIC_HEARTBEAT")
+    if unit == "proxybox-watchdog":
+        return _heartbeat_state("PROXYBOX_WATCHDOG_HEARTBEAT")
     if unit == "sing-box":
         return _clash_api_state()
     return "unknown"
@@ -241,8 +243,8 @@ def _dedupe_ports(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
-def _heartbeat_state() -> str:
-    raw_path = os.environ.get("PROXYBOX_TRAFFIC_HEARTBEAT")
+def _heartbeat_state(env_name: str) -> str:
+    raw_path = os.environ.get(env_name)
     if not raw_path:
         return "unknown"
     path = Path(raw_path)

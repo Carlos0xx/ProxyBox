@@ -9,7 +9,7 @@ from fastapi import HTTPException
 
 from app import bootstrap
 from app.routers import actions, connections, system
-from app.services import caddy, fail2ban, singbox, system_stats
+from app.services import caddy, fail2ban, singbox, system_stats, watchdog
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPOSE = (ROOT / "docker-compose.yml").read_text()
@@ -33,6 +33,7 @@ def test_compose_uses_bridge_network_and_env_published_ports() -> None:
     assert "/opt/proxybox/deploy/docker/admin-entrypoint.sh" in COMPOSE
     assert "PROXYBOX_DOCKER_LOG_DIR" in COMPOSE
     assert "/var/lib/proxybox/logs" in COMPOSE
+    assert "PROXYBOX_WATCHDOG_HEARTBEAT=/var/lib/proxybox/watchdog.heartbeat" in COMPOSE
     assert "/etc/proxybox/bot.env" not in COMPOSE
 
 
@@ -112,6 +113,7 @@ def test_bootstrap_uses_docker_env_ports(monkeypatch, tmp_path: Path) -> None:
     assert proxybox_cfg["ports"]["vless_range"] == [11101, 11150]
     assert proxybox_cfg["ports"]["hy2_range"] == [22101, 22150]
     assert proxybox_cfg["clash"]["api_url"] == "http://sing-box:19090"
+    assert "proxybox-watchdog" in proxybox_cfg["services"]["monitored"]
 
 
 def test_singbox_reload_uses_docker_flag_before_systemctl(monkeypatch, tmp_path: Path) -> None:
@@ -164,14 +166,80 @@ def test_docker_service_restart_actions_stay_inside_docker(
     assert exc.value.status_code == 501
 
 
+def test_docker_admin_entrypoint_starts_watchdog() -> None:
+    entrypoint = (ROOT / "deploy" / "docker" / "admin-entrypoint.sh").read_text()
+
+    assert "python -m app.services.watchdog" in entrypoint
+    assert "watchdog_pid" in entrypoint
+
+
+def test_watchdog_recovers_failed_docker_ports_and_worker(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    reload_flag = tmp_path / "sing-box" / "reload.flag"
+    worker_flag = tmp_path / "traffic-worker.restart"
+    watchdog_heartbeat = tmp_path / "watchdog.heartbeat"
+    settings = SimpleNamespace(
+        services=SimpleNamespace(monitored=["proxybox-traffic-worker", "proxybox-watchdog"])
+    )
+
+    monkeypatch.setenv("PROXYBOX_RUNTIME", "docker")
+    monkeypatch.setenv("PROXYBOX_SINGBOX_RELOAD_FILE", str(reload_flag))
+    monkeypatch.setenv("PROXYBOX_WORKER_RESTART_FILE", str(worker_flag))
+    monkeypatch.setenv("PROXYBOX_WATCHDOG_HEARTBEAT", str(watchdog_heartbeat))
+    monkeypatch.setenv("PROXYBOX_WATCHDOG_COOLDOWN", "1")
+    monkeypatch.setattr(
+        watchdog.system_stats,
+        "systemctl_is_active",
+        lambda unit: (
+            "failed" if unit in {"proxybox-traffic-worker", "proxybox-watchdog"} else "active"
+        ),
+    )
+    monkeypatch.setattr(
+        watchdog.system_stats,
+        "project_port_statuses",
+        lambda _settings: [
+            {"owner": "sing-box", "status": "failed"},
+            {"owner": "proxybox-admin", "status": "active"},
+        ],
+    )
+
+    actions = watchdog.check_once(settings=settings, cooldowns={}, now=100.0)
+
+    assert {"service": "sing-box", "action": "reload_requested"} in actions
+    assert {"service": "proxybox-traffic-worker", "action": "restart_requested"} in actions
+    assert {"service": "proxybox-watchdog", "action": "heartbeat_refreshed"} in actions
+    assert reload_flag.exists()
+    assert worker_flag.exists()
+    assert watchdog_heartbeat.exists()
+
+
+def test_watchdog_restarts_native_monitored_owner(monkeypatch) -> None:
+    calls: list[list[str]] = []
+    settings = SimpleNamespace(services=SimpleNamespace(monitored=["sing-box"]))
+
+    monkeypatch.delenv("PROXYBOX_RUNTIME", raising=False)
+    monkeypatch.setattr(watchdog.shell, "run", lambda cmd, timeout=8: calls.append(cmd) or "")
+
+    result = watchdog.recover_owner("sing-box", settings=settings)
+
+    assert result == {"service": "sing-box", "action": "restart_requested"}
+    assert calls == [["systemctl", "restart", "--no-block", "sing-box"]]
+
+
 def test_docker_status_uses_internal_runtime_probes(monkeypatch, tmp_path: Path) -> None:
     heartbeat = tmp_path / "traffic-worker.heartbeat"
+    watchdog_heartbeat = tmp_path / "watchdog.heartbeat"
     heartbeat.write_text("ok")
+    watchdog_heartbeat.write_text("ok")
     monkeypatch.setenv("PROXYBOX_RUNTIME", "docker")
     monkeypatch.setenv("PROXYBOX_TRAFFIC_HEARTBEAT", str(heartbeat))
+    monkeypatch.setenv("PROXYBOX_WATCHDOG_HEARTBEAT", str(watchdog_heartbeat))
 
     assert system_stats.systemctl_is_active("proxybox-admin") == "active"
     assert system_stats.systemctl_is_active("proxybox-traffic-worker") == "active"
+    assert system_stats.systemctl_is_active("proxybox-watchdog") == "active"
 
 
 def test_project_port_statuses_include_native_service_ports(monkeypatch, tmp_path: Path) -> None:

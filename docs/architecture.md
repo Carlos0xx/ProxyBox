@@ -176,10 +176,9 @@ CREATE TABLE passkey_credential (      -- opt-in
 | Path | Notes |
 | --- | --- |
 | `GET /api/sub/{sub_token}` | Subscription URI list (default). `sub_token` itself is the secret. |
+| `GET /api/sub/{sub_token}/shadowrocket.yaml` | Shadowrocket nodes + split-rule config. |
 | `GET /api/sub/{sub_token}/clash.yaml` | Clash config. |
 | `GET /api/sub/{sub_token}/merlin.yaml` | AsusWRT-Merlin variant. |
-| `GET /api/sub/{sub_token}/shadowrocket.conf` | Shadowrocket native format. |
-| `GET /api/sub/{sub_token}/sub.txt` | URI list with `.txt` extension (some clients key on it). |
 
 ### Server-rendered HTML
 
@@ -216,7 +215,7 @@ CREATE TABLE passkey_credential (      -- opt-in
 | **Per-device inbounds** | Unique TCP/UDP port + UUID per device | Revoke surgically; traffic accounting is naturally per-device. |
 | **Traffic source** | sing-box Clash API (not nftables / eBPF) | No kernel-level rules to manage; single source of truth; works in Docker. |
 | **Subscription path** | Plain HTTP `text/plain` URI list at `/api/sub/{token}` | Maximum client compatibility — not all clients parse raw `vless://`. |
-| **5 subscription formats** | URI list + Clash + Merlin + Shadowrocket + .txt — generated on the fly | Avoid format mismatches with router firmware and edge-case clients. |
+| **Subscription formats** | Shadowrocket split config + Clash + Merlin + URI list — generated on the fly | Avoid format mismatches with router firmware and edge-case clients. |
 | **Login form** | `/login/{12-char-suffix}`; bare `/login` 404s | Bots probing common paths can't even confirm a form exists. |
 | **Admin auth** | Cookie + URL-path token *both* required; bypass mode opt-in | A stolen cookie can't be replayed against an instance on a different host. |
 | **Reality cover-domain** | Random pick from a small pool of well-known TLS-fronted sites per install | No shared fingerprint across deployments. |

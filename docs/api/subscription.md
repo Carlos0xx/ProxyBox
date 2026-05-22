@@ -21,13 +21,12 @@ Five suffixes are accepted — pick the one that matches the client:
 | Suffix | MIME | Best for |
 | --- | --- | --- |
 | *(none)* | `text/plain` | sing-box · Shadowrocket "Type: Subscribe" · Hiddify · NekoBox · v2rayN |
-| `/sub.txt` | `text/plain` | Clients that key on the `.txt` extension |
+| `/shadowrocket.yaml` | `application/yaml` | Shadowrocket subscription with nodes + rules |
 | `/clash.yaml` | `application/yaml` | Stash · Clash for iOS · Clash Verge · Clash Meta |
 | `/merlin.yaml` | `application/yaml` | AsusWRT-Merlin routers with Clash |
-| `/shadowrocket.conf` | `text/plain` | Shadowrocket native parser (fallback when "Subscribe" misbehaves) |
 
 > [!NOTE]
-> All five are generated server-side, on the fly, from the same device row. No persisted files. Rotating `sub_token` invalidates every format simultaneously.
+> All public formats are generated server-side, on the fly, from the same device row. No persisted files. Rotating `sub_token` invalidates every format simultaneously.
 
 ---
 
