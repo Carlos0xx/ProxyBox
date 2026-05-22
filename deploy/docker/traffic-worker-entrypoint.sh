@@ -10,6 +10,10 @@ mkdir -p "$(dirname "$restart_file")" "$log_dir"
 touch "$restart_file" "$seen_file"
 touch "$log_file"
 
+mtime() {
+    stat -c %Y "$1" 2>/dev/null || echo 0
+}
+
 tail -n 0 -f "$log_file" &
 tail_pid="$!"
 
@@ -28,7 +32,7 @@ while true; do
     pid="$!"
 
     while kill -0 "$pid" 2>/dev/null; do
-        if [ "$restart_file" -nt "$seen_file" ]; then
+        if [ "$(mtime "$restart_file")" -gt "$(mtime "$seen_file")" ]; then
             kill -TERM "$pid" 2>/dev/null || true
             wait "$pid" 2>/dev/null || true
             touch "$seen_file"

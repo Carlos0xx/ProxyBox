@@ -17,7 +17,7 @@
 
 set -uo pipefail
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 
 CANDIDATE_TAG="${1:-}"
 red()   { printf "\033[31m%s\033[0m\n" "$*"; }
